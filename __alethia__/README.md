@@ -26,19 +26,15 @@ The agent will call `alethia_tell` once per file. For `safety.nlp`, the `expect 
 - **Navigate to the full URL at the start of each file** so each test is idempotent and can be run in isolation.
 - **Keep files focused** — one NLP file = one scenario. Parallel runs are easier to scan when tests aren't interleaved.
 
-## Known tip: `wait` after async actions
+## Handling async state changes
 
-If your app has async operations (sign-in with a spinner, delayed save, etc.), add a brief `wait` after the trigger step so the DOM has time to settle before the next assertion:
+Alethia retries transient execution errors automatically — the runtime detects when a page is mid-rewrite (after a click that kicks off an async handler + re-render) and backs off a few times before surfacing a real failure. That means you usually **don't** need to add `wait` statements between steps, even when the app has real async behavior. The starter's tests demonstrate this: the Sign-in flow uses a 400ms fake-API handler with a full DOM re-render, and the assertions that follow it run without any explicit wait.
 
-```
-click Sign in
-wait 600
-assert Welcome is visible
-```
+When you DO need `wait`:
 
-Rationale: on async state changes that re-render major sections of the page, an immediately-following `executeJavaScript` can hit the DOM mid-rewrite and error with "Script failed to execute." A 400–800ms `wait` lets the transition finish.
-
-This is a **test-authoring workaround for a runtime limitation** — the underlying fix is retry-on-transient-script-error in the main-process orchestrator, planned for v0.2.1 of the runtime. When that ships, you can drop most of these waits.
+- Animations that take a long time to settle (>1s)
+- Polling an external service that might take seconds
+- Watching for a specific element to appear — prefer `wait for X to appear` (explicit, documents intent) over a blind `wait 500`
 
 ## CI setup (not included yet)
 

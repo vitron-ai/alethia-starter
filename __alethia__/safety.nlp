@@ -3,7 +3,6 @@ navigate to http://127.0.0.1:5173
 type alice@company.com into the email field
 type platform into the team field
 click Sign in
-wait 600
 click Settings
 assert Danger zone is visible
 assert Delete Account is visible
