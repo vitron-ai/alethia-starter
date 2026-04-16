@@ -106,6 +106,14 @@
   .task-priority.priority-medium { border-color: var(--accent); color: var(--accent); }
   .task-priority.priority-high { border-color: var(--err); color: #fca5a5; }
 
+  /* task filter tabs */
+  .task-tabs { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 0; }
+  .task-tab { padding: 8px 14px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--fg-muted); font: inherit; font-weight: 500; cursor: pointer; margin-bottom: -1px; transition: color 0.1s, border-color 0.1s; }
+  .task-tab:hover { color: var(--fg); }
+  .task-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .task-tab .count { display: inline-block; background: var(--bg-3); color: var(--fg-muted); font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px; margin-left: 6px; }
+  .task-tab.active .count { background: var(--accent); color: #fff; }
+
   /* toast — transient notification */
   .app-toast { position: fixed; top: 24px; right: 24px; z-index: 60; padding: 12px 18px; border-radius: var(--radius); font-size: 14px; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.35); animation: toastSlide 0.2s ease-out; }
   .app-toast.kind-ok { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); color: #86efac; }
@@ -137,6 +145,7 @@ const state = {
   taskQuery: '',            // live-filter string for the tasks list
   editingTaskId: null,      // id of the task currently being edited in modal
   toast: null,              // { id, message, kind } — transient success/error notification
+  taskFilter: 'all',        // 'all' | 'active' | 'done' — Tasks-page tab filter
 };
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -171,6 +180,10 @@ const store = {
   async deleteAccount() { await delay(500); state.tasks = []; state.session = null; },
   setNotifications(v) { state.settings.notifications = v; },
   setTaskQuery(q) { state.taskQuery = q; },
+  setTaskFilter(f) {
+    if (!['all', 'active', 'done'].includes(f)) throw new Error('Invalid filter.');
+    state.taskFilter = f;
+  },
   openEditModal(id) { state.editingTaskId = id; },
   closeEditModal() { state.editingTaskId = null; },
   async setTaskPriority(id, priority) {
@@ -299,17 +312,22 @@ function renderDashboard(main) {
 
 function renderTasks(main) {
   const q = state.taskQuery.trim().toLowerCase();
+  const f = state.taskFilter;
+  // Apply filter tab first, then the search query. Order matters so the
+  // "showing N of M" summary refers to the filtered pool, not the raw list.
+  const filtered = f === 'all' ? state.tasks : state.tasks.filter((t) => t.status === f);
   const visible = q
-    ? state.tasks.filter((t) => t.title.toLowerCase().includes(q))
-    : state.tasks;
+    ? filtered.filter((t) => t.title.toLowerCase().includes(q))
+    : filtered;
 
   const activeCount = state.tasks.filter((t) => t.status === 'active').length;
   const doneCount = state.tasks.filter((t) => t.status === 'done').length;
+  const totalCount = state.tasks.length;
   main.innerHTML = `
     <div class="page-head">
       <h1>Tasks</h1>
       <p>Add, complete, edit, search, or remove tasks. Each action is an async call that exercises loading states.</p>
-      <p id="task-count-summary" style="margin-top:4px;font-weight:500;color:var(--fg);">${state.tasks.length} total — ${activeCount} active, ${doneCount} done</p>
+      <p id="task-count-summary" style="margin-top:4px;font-weight:500;color:var(--fg);">${totalCount} total — ${activeCount} active, ${doneCount} done</p>
     </div>
     <div class="section">
       <div class="add-task-row">
@@ -318,15 +336,21 @@ function renderTasks(main) {
       </div>
       <div id="add-task-error" class="error-text" role="alert" style="margin-bottom:8px;"></div>
 
+      <div class="task-tabs" role="tablist" aria-label="Task filter">
+        <button class="task-tab ${f==='all'?'active':''}" role="tab" aria-selected="${f==='all'}" data-task-filter="all">All <span class="count">${totalCount}</span></button>
+        <button class="task-tab ${f==='active'?'active':''}" role="tab" aria-selected="${f==='active'}" data-task-filter="active">Active <span class="count">${activeCount}</span></button>
+        <button class="task-tab ${f==='done'?'active':''}" role="tab" aria-selected="${f==='done'}" data-task-filter="done">Done <span class="count">${doneCount}</span></button>
+      </div>
+
       <div class="add-task-row" style="margin-top:4px;">
         <input id="task-search" type="search" placeholder="Search tasks…" autocomplete="off" name="task-search" value="${escapeHtml(state.taskQuery)}" />
         ${q ? '<button id="clear-search-btn" class="btn btn-ghost">Clear</button>' : ''}
       </div>
-      ${q ? `<div style="font-size:12px;color:var(--fg-muted);margin-bottom:8px;">Showing ${visible.length} of ${state.tasks.length} — filter "${escapeHtml(state.taskQuery)}"</div>` : ''}
+      ${q ? `<div style="font-size:12px;color:var(--fg-muted);margin-bottom:8px;">Showing ${visible.length} of ${filtered.length} — filter "${escapeHtml(state.taskQuery)}"</div>` : ''}
 
       <div class="task-list" id="task-list">
         ${visible.length === 0
-          ? `<div class="task-empty">${q ? 'No tasks match your search.' : 'No tasks yet. Add one above.'}</div>`
+          ? `<div class="task-empty">${q ? 'No tasks match your search.' : (f === 'done' ? 'No completed tasks yet.' : f === 'active' ? 'No active tasks — nice work.' : 'No tasks yet. Add one above.')}</div>`
           : visible.map(renderTaskRow).join('')}
       </div>
     </div>
@@ -359,6 +383,11 @@ function renderTasks(main) {
   });
   const clearBtn = document.getElementById('clear-search-btn');
   if (clearBtn) clearBtn.addEventListener('click', () => { store.setTaskQuery(''); render(); });
+
+  main.querySelectorAll('[data-task-filter]').forEach((b) => b.addEventListener('click', () => {
+    store.setTaskFilter(b.dataset.taskFilter);
+    render();
+  }));
 
   main.querySelectorAll('[data-task-toggle]').forEach((b) => b.addEventListener('click', async () => {
     b.closest('.task-row').classList.add('loading');

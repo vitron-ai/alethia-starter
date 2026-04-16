@@ -1,0 +1,68 @@
+name: alethia
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: alethia-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Run Alethia NLP tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out starter
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install system deps for Electron + xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            xvfb \
+            libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+            libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+            libgbm1 libpango-1.0-0 libcairo2 libasound2t64 libgtk-3-0
+
+      - name: Serve Atlas on :5173
+        run: |
+          python3 -m http.server 5173 >/tmp/atlas-server.log 2>&1 &
+          for i in $(seq 1 20); do
+            if curl -sf http://127.0.0.1:5173 >/dev/null; then
+              echo "Atlas is up."
+              exit 0
+            fi
+            sleep 0.25
+          done
+          echo "Atlas failed to start" >&2
+          cat /tmp/atlas-server.log >&2
+          exit 1
+
+      - name: Run Alethia NLP tests under xvfb
+        env:
+          ALETHIA_TARGET: http://127.0.0.1:5173
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
+            node __alethia__/ci-runner.mjs
+
+      - name: Upload Alethia logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alethia-logs
+          path: |
+            /tmp/atlas-server.log
+            ~/.alethia/logs/**
+          if-no-files-found: ignore
+          retention-days: 7

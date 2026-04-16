@@ -1,5 +1,10 @@
 # alethia-starter
 
+[![alethia](https://github.com/vitron-ai/alethia-starter/actions/workflows/alethia.yml/badge.svg)](https://github.com/vitron-ai/alethia-starter/actions/workflows/alethia.yml)
+[![alethia verified](https://img.shields.io/badge/alethia-verified-22c55e?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48L3N2Zz4=)](https://github.com/vitron-ai/alethia)
+[![npm](https://img.shields.io/npm/v/%40vitronai%2Falethia?label=%40vitronai%2Falethia&color=3b82f6)](https://www.npmjs.com/package/@vitronai/alethia)
+[![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+
 A working starting point for writing agent-native E2E tests with [Alethia](https://www.npmjs.com/package/@vitronai/alethia). Fork this, adapt the NLP, point your agent at it.
 
 No framework. No build step. Two files, runs in any static server.
@@ -41,7 +46,32 @@ The agent will call `alethia_tell` once per test file and report pass/fail. File
 | `smoke.nlp` | Sign-in screen renders |
 | `signin-flow.nlp` | Happy path — sign in, land on dashboard, nav is present |
 | `crud-flow.nlp` | Task list — add, assert it appears |
+| `edit-flow.nlp` | Inline editing — open modal, change title, save |
+| `search-flow.nlp` | Live-filter search box narrows the task list |
+| `priority-flow.nlp` | Priority dropdown updates a task + confirms via toast |
+| `toast-flow.nlp` | Transient toast appears, then auto-dismisses |
+| `count-flow.nlp` | Text-based counters stay consistent after add |
+| `tabs-flow.nlp` | Tab filter (All/Active/Done) narrows the list |
 | `safety.nlp` | **EA1 policy verification** — `expect block:` on Delete Account |
+
+---
+
+## Running the tests in CI
+
+This repo ships a GitHub Actions workflow at [`.github/workflows/alethia.yml`](./.github/workflows/alethia.yml) that:
+
+1. Starts Atlas on a static server
+2. Installs xvfb + Electron's Linux deps
+3. Runs [`__alethia__/ci-runner.mjs`](./__alethia__/ci-runner.mjs) — a tiny stdio MCP client that pipes every `.nlp` file through `@vitronai/alethia` and fails the build on the first red step
+
+To run the same flow locally:
+
+```bash
+python3 -m http.server 5173 &
+node __alethia__/ci-runner.mjs
+```
+
+The runner respects `ALETHIA_TARGET` if your app runs on a different port.
 
 ---
 

@@ -1,0 +1,17 @@
+name atlas task filter tabs flow
+navigate to http://127.0.0.1:5173
+type alice@company.com into the email field
+type platform into the team field
+click Sign in
+click Tasks
+assert Review pending deployments is visible
+assert Rotate Vault credentials is visible
+click Done
+assert Rotate Vault credentials is visible
+assert Review pending deployments is not visible
+click Active
+assert Review pending deployments is visible
+assert Rotate Vault credentials is not visible
+click All
+assert Review pending deployments is visible
+assert Rotate Vault credentials is visible
