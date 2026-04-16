@@ -63,6 +63,22 @@ jobs:
           cat /tmp/atlas-server.log >&2
           exit 1
 
+      - name: Preflight — start Alethia runtime under xvfb
+        # The bridge auto-spawns the runtime the first time a tool call
+        # needs it, but on ubuntu-latest the Chromium sandbox can't setuid
+        # as the non-root `runner` user and silently fails. Exercise the
+        # bridge's --health-check path first: it runs ensureRuntime() plus
+        # a tools/list probe and prints verbose diagnostics. If this
+        # succeeds, the next step's bridge spawn will find a ready runtime.
+        env:
+          ELECTRON_DISABLE_SANDBOX: '1'
+          ALETHIA_DEBUG: '1'
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
+            alethia-mcp --health-check || true
+          echo "--- ~/.alethia tree ---"
+          ls -la ~/.alethia/runtime/ 2>/dev/null || echo "(runtime dir not created)"
+
       - name: Run Alethia NLP tests under xvfb
         env:
           ALETHIA_TARGET: http://127.0.0.1:5173
@@ -71,6 +87,10 @@ jobs:
           ALETHIA_BRIDGE: alethia-mcp
           # Surface bridge diagnostics in the CI log when tests misbehave.
           ALETHIA_DEBUG: '1'
+          # Chromium sandbox can't setuid as `runner` in GitHub-hosted
+          # ubuntu runners. This env var makes Electron skip the sandbox
+          # (in addition to any --no-sandbox argv the runtime passes).
+          ELECTRON_DISABLE_SANDBOX: '1'
         run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
             node __alethia__/ci-runner.mjs
