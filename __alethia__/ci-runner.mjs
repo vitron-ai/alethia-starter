@@ -158,16 +158,34 @@ try {
         ok(`${file} (${steps} steps, ${ms}ms)`);
       } else {
         totalFailed++;
-        const failedStep = (parsed?.stepResults || parsed?.run?.stepRuns || []).find((s) => s?.ok === false);
         fail(`${file}`);
-        if (failedStep?.detail) dim(`  → ${failedStep.detail}`);
-        else if (parsed?.error) dim(`  → ${parsed.error}`);
-        else dim(`  → (no structured failure detail)`);
+        // Surface everything useful: failed step detail, top-level error,
+        // isError flag, and if NOTHING structured came back, dump the raw
+        // MCP result so the CI log contains actionable diagnostics rather
+        // than a meaningless "(no structured failure detail)".
+        const failedStep = (parsed?.stepResults || parsed?.run?.stepRuns || []).find((s) => s?.ok === false);
+        if (failedStep?.detail) {
+          dim(`  → ${failedStep.detail}`);
+        } else if (parsed?.error) {
+          dim(`  → error: ${parsed.error}`);
+        } else if (result?.isError === true) {
+          const errText = typeof text === 'string' ? text.slice(0, 500) : JSON.stringify(result).slice(0, 500);
+          dim(`  → MCP error response: ${errText}`);
+        } else if (!parsed) {
+          // MCP returned content but it did not parse as JSON — the bridge or
+          // runtime printed something unstructured (e.g. a startup failure).
+          const preview = typeof text === 'string' ? text.slice(0, 500) : JSON.stringify(result).slice(0, 500);
+          dim(`  → non-JSON response: ${preview}`);
+        } else {
+          // Parsed JSON but no step-level failure and no top-level error key.
+          // Dump the parsed shape so we can see what the runtime actually sent.
+          dim(`  → unexpected response shape: ${JSON.stringify(parsed).slice(0, 500)}`);
+        }
       }
     } catch (e) {
       totalFailed++;
       fail(`${file}`);
-      dim(`  → ${e.message}`);
+      dim(`  → request failed: ${e.message}`);
     }
   }
 } finally {

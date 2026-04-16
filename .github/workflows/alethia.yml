@@ -29,11 +29,25 @@ jobs:
       - name: Install system deps for Electron + xvfb
         run: |
           sudo apt-get update
+          # Electron's Linux deps on ubuntu-24.04. libasound2t64 is the
+          # renamed libasound2 as of Noble. libgbm1, libxkbcommon0, and
+          # libxshmfence1 are load-bearing for Chromium GPU process init
+          # even under xvfb. libnotify4 + libsecret-1-0 satisfy the
+          # notification + keyring stubs Electron expects.
           sudo apt-get install -y \
             xvfb \
             libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
             libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
-            libgbm1 libpango-1.0-0 libcairo2 libasound2t64 libgtk-3-0
+            libgbm1 libpango-1.0-0 libcairo2 libasound2t64 libgtk-3-0 \
+            libxshmfence1 libnotify4 libsecret-1-0 libnspr4
+
+      - name: Pre-install pinned Alethia bridge
+        # Pin to the current minimum-safe bridge version rather than relying
+        # on npx resolution at test time. Prevents a stale cache from
+        # picking up a deprecated bridge that points at a yanked runtime.
+        run: |
+          npm install -g @vitronai/alethia@^0.3.27
+          alethia-mcp --version
 
       - name: Serve Atlas on :5173
         run: |
@@ -52,6 +66,11 @@ jobs:
       - name: Run Alethia NLP tests under xvfb
         env:
           ALETHIA_TARGET: http://127.0.0.1:5173
+          # Use the pinned bridge we just installed instead of resolving
+          # @vitronai/alethia via npx (which can hit a stale cache).
+          ALETHIA_BRIDGE: alethia-mcp
+          # Surface bridge diagnostics in the CI log when tests misbehave.
+          ALETHIA_DEBUG: '1'
         run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
             node __alethia__/ci-runner.mjs
