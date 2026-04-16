@@ -1,0 +1,12 @@
+name atlas toast flow
+navigate to http://127.0.0.1:5173
+type alice@company.com into the email field
+type platform into the team field
+click Sign in
+click Tasks
+type Draft release notes for v0.2.1 into the new-task field
+click Add task
+assert Task added is visible
+wait 2500
+assert Task added is not visible
+assert Draft release notes for v0.2.1 is visible

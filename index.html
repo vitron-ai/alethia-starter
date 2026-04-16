@@ -99,6 +99,18 @@
   /* spinner */
   .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* priority select */
+  .task-priority { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 8px; font-size: 12px; font: inherit; cursor: pointer; }
+  .task-priority.priority-low { border-color: #475569; color: var(--fg-muted); }
+  .task-priority.priority-medium { border-color: var(--accent); color: var(--accent); }
+  .task-priority.priority-high { border-color: var(--err); color: #fca5a5; }
+
+  /* toast — transient notification */
+  .app-toast { position: fixed; top: 24px; right: 24px; z-index: 60; padding: 12px 18px; border-radius: var(--radius); font-size: 14px; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.35); animation: toastSlide 0.2s ease-out; }
+  .app-toast.kind-ok { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); color: #86efac; }
+  .app-toast.kind-err { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; }
+  @keyframes toastSlide { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </head>
 <body>
@@ -117,13 +129,14 @@
 const state = {
   session: null,
   tasks: [
-    { id: 'seed-1', title: 'Review pending deployments', createdAt: Date.now() - 3600_000, status: 'active' },
-    { id: 'seed-2', title: 'Audit Q2 access logs', createdAt: Date.now() - 7200_000, status: 'active' },
-    { id: 'seed-3', title: 'Rotate Vault credentials', createdAt: Date.now() - 86400_000, status: 'done' },
+    { id: 'seed-1', title: 'Review pending deployments', createdAt: Date.now() - 3600_000, status: 'active', priority: 'high' },
+    { id: 'seed-2', title: 'Audit Q2 access logs', createdAt: Date.now() - 7200_000, status: 'active', priority: 'medium' },
+    { id: 'seed-3', title: 'Rotate Vault credentials', createdAt: Date.now() - 86400_000, status: 'done', priority: 'low' },
   ],
   settings: { notifications: true },
   taskQuery: '',            // live-filter string for the tasks list
   editingTaskId: null,      // id of the task currently being edited in modal
+  toast: null,              // { id, message, kind } — transient success/error notification
 };
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -142,7 +155,8 @@ const store = {
     const t = title.trim();
     if (!t) throw new Error('Task title cannot be empty.');
     await delay(200);
-    state.tasks.unshift({ id: 't-' + Date.now().toString(36), title: t, createdAt: Date.now(), status: 'active' });
+    state.tasks.unshift({ id: 't-' + Date.now().toString(36), title: t, createdAt: Date.now(), status: 'active', priority: 'medium' });
+    store.showToast('Task added', 'ok');
   },
   async toggleTask(id) { await delay(150); const t = state.tasks.find((x) => x.id === id); if (t) t.status = t.status === 'done' ? 'active' : 'done'; },
   async deleteTask(id) { await delay(200); state.tasks = state.tasks.filter((t) => t.id !== id); },
@@ -159,13 +173,49 @@ const store = {
   setTaskQuery(q) { state.taskQuery = q; },
   openEditModal(id) { state.editingTaskId = id; },
   closeEditModal() { state.editingTaskId = null; },
+  async setTaskPriority(id, priority) {
+    if (!['low', 'medium', 'high'].includes(priority)) throw new Error('Invalid priority.');
+    await delay(150);
+    const t = state.tasks.find((x) => x.id === id);
+    if (t) t.priority = priority;
+  },
+  showToast(message, kind = 'ok') {
+    const id = 'toast-' + Date.now().toString(36);
+    state.toast = { id, message, kind };
+    render();
+    // Toast auto-dismisses after 2s. Real apps usually keep these short —
+    // long enough to be seen, short enough not to clutter the UI. This
+    // duration is also what the safety NLP tests' `assert X is not visible`
+    // assertions count on (they poll up to ~2s for the toast to go away).
+    setTimeout(() => {
+      if (state.toast && state.toast.id === id) {
+        state.toast = null;
+        render();
+      }
+    }, 2000);
+  },
 };
 
 // ─── router ─────────────────────────────────────────────────────────
 const routes = {};
 const go = (path) => { if (location.hash === '#' + path) render(); else location.hash = path; };
 const currentPath = () => location.hash.replace(/^#/, '') || '/';
-const render = () => { const p = currentPath(); (routes[p] || routes['*'])(); };
+const render = () => {
+  const p = currentPath();
+  (routes[p] || routes['*'])();
+  // Render toast as a fixed-position overlay after the page renders.
+  // Removed first so a re-render replaces it cleanly.
+  const existing = document.getElementById('app-toast');
+  if (existing) existing.remove();
+  if (state.toast) {
+    const t = document.createElement('div');
+    t.id = 'app-toast';
+    t.className = `app-toast kind-${state.toast.kind}`;
+    t.setAttribute('role', 'status');
+    t.textContent = state.toast.message;
+    document.body.appendChild(t);
+  }
+};
 window.addEventListener('hashchange', render);
 
 // ─── shell ──────────────────────────────────────────────────────────
@@ -253,10 +303,13 @@ function renderTasks(main) {
     ? state.tasks.filter((t) => t.title.toLowerCase().includes(q))
     : state.tasks;
 
+  const activeCount = state.tasks.filter((t) => t.status === 'active').length;
+  const doneCount = state.tasks.filter((t) => t.status === 'done').length;
   main.innerHTML = `
     <div class="page-head">
       <h1>Tasks</h1>
       <p>Add, complete, edit, search, or remove tasks. Each action is an async call that exercises loading states.</p>
+      <p id="task-count-summary" style="margin-top:4px;font-weight:500;color:var(--fg);">${state.tasks.length} total — ${activeCount} active, ${doneCount} done</p>
     </div>
     <div class="section">
       <div class="add-task-row">
@@ -319,6 +372,12 @@ function renderTasks(main) {
   }));
   main.querySelectorAll('[data-task-edit]').forEach((b) => b.addEventListener('click', () => {
     store.openEditModal(b.dataset.taskEdit);
+    render();
+  }));
+  main.querySelectorAll('[data-task-priority]').forEach((sel) => sel.addEventListener('change', async (e) => {
+    const id = e.target.dataset.taskPriority;
+    await store.setTaskPriority(id, e.target.value);
+    store.showToast(`Priority updated to ${e.target.value}`, 'ok');
     render();
   }));
 
@@ -393,6 +452,11 @@ function renderTaskRow(t) {
       </div>
       <div class="task-actions">
         <span class="task-status ${done ? 'done' : 'active'}">${done ? 'Done' : 'Active'}</span>
+        <select class="task-priority priority-${t.priority}" aria-label="priority for ${escapeHtml(t.title)}" name="priority-${t.id}" data-task-priority="${t.id}">
+          <option value="low" ${t.priority === 'low' ? 'selected' : ''}>Low</option>
+          <option value="medium" ${t.priority === 'medium' ? 'selected' : ''}>Medium</option>
+          <option value="high" ${t.priority === 'high' ? 'selected' : ''}>High</option>
+        </select>
         <button class="btn btn-ghost btn-small" data-task-toggle="${t.id}">${done ? 'Reopen' : 'Complete'}</button>
         <button class="btn btn-ghost btn-small" data-task-edit="${t.id}">Edit</button>
         <button class="btn btn-danger btn-small" data-task-delete="${t.id}">Delete</button>

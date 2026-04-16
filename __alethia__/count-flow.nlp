@@ -1,0 +1,13 @@
+name atlas task count text-assertion flow
+navigate to http://127.0.0.1:5173
+type alice@company.com into the email field
+type platform into the team field
+click Sign in
+click Tasks
+assert 3 total is visible
+assert 2 active is visible
+assert 1 done is visible
+type Sweep dependency CVEs into the new-task field
+click Add task
+assert 4 total is visible
+assert 3 active is visible

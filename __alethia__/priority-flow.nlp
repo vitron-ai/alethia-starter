@@ -1,0 +1,9 @@
+name atlas task priority flow
+navigate to http://127.0.0.1:5173
+type alice@company.com into the email field
+type platform into the team field
+click Sign in
+click Tasks
+assert Review pending deployments is visible
+select Low from priority for Review pending deployments
+assert Priority updated to low is visible
