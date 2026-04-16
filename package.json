@@ -1,0 +1,15 @@
+{
+  "name": "alethia-starter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A working starting point for writing agent-native E2E tests with Alethia. Fork this, adapt the NLP, run the CI.",
+  "scripts": {
+    "serve": "python3 -m http.server 5173",
+    "test": "echo 'Tests live in ./__alethia__/ — run them with @vitronai/alethia via Claude Code, Cursor, or any MCP client. See README.'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitron-ai/alethia-starter.git"
+  },
+  "license": "MIT"
+}

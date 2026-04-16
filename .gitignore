@@ -1,0 +1,18 @@
+# dependencies (none expected — the starter is deliberately dep-free, but
+# if a fork adds a build step these directories should not be committed)
+node_modules/
+.pnpm-store/
+
+# OS / editor cruft
+.DS_Store
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+
+# local alethia artifacts
+.alethia/
+*.alethia-session.json
+
+# python cache from `python3 -m http.server`
+__pycache__/

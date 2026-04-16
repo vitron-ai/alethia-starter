@@ -1,0 +1,10 @@
+name atlas tasks crud
+navigate to http://127.0.0.1:5173
+type alice@company.com into the email field
+type platform into the team field
+click Sign in
+click Tasks
+assert Review pending deployments is visible
+type Write v0.2 release notes into the new-task field
+click Add task
+assert Write v0.2 release notes is visible
