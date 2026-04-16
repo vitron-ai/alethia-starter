@@ -46,7 +46,7 @@ jobs:
         # on npx resolution at test time. Prevents a stale cache from
         # picking up a deprecated bridge that points at a yanked runtime.
         run: |
-          npm install -g @vitronai/alethia@^0.3.27
+          npm install -g @vitronai/alethia@^0.3.28
           alethia-mcp --version
 
       - name: Serve Atlas on :5173
