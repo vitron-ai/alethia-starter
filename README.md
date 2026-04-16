@@ -123,6 +123,14 @@ That's it. No config, no test runner, no `.spec` files. Your agent reads the NLP
 - Tessl listing: [tessl.io/registry/vitron-ai/alethia](https://tessl.io/registry/vitron-ai/alethia)
 - Website: [vitron.ai](https://vitron.ai)
 
+## Security posture — local-only by architecture
+
+Alethia is a **local-only** runtime by design. The signed binary refuses to navigate to any origin outside the local allowlist (`file://`, `localhost`, `127.0.0.1`, `.local`, RFC1918 ranges). This is a compile-time constant enforced in four places inside the runtime — it is **not** a CLI flag, env var, MCP argument, profile, or UI toggle.
+
+Why: Alethia's zero-IPC execution would make it an ideal credential-stuffing / account-takeover / abuse-automation tool if turned against the open web. It will not become that tool. For partner-specific production-origin access, contact **gatekeeper@vitron.ai** — we issue custom-signed builds; we do not ship configurability.
+
+Full posture at [vitron-ai/alethia/SECURITY.md](https://github.com/vitron-ai/alethia/blob/main/SECURITY.md).
+
 ## License
 
 The starter code (this repo) is MIT. The Alethia runtime it's testing is patent-pending and governed by a separate license — see [github.com/vitron-ai/alethia](https://github.com/vitron-ai/alethia).
