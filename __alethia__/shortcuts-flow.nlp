@@ -1,0 +1,11 @@
+name atlas keyboard shortcuts flow
+navigate to http://127.0.0.1:5173
+type alice@company.com into the email field
+type platform into the team field
+click Sign in
+click Settings
+assert Keyboard shortcuts is visible
+assert Search tasks is visible
+assert New task is visible
+assert Go to page is visible
+assert Close modal is visible

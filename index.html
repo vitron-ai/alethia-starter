@@ -69,7 +69,7 @@
 
   /* task list */
   .task-list { display: flex; flex-direction: column; gap: 8px; }
-  .task-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 12px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
+  .task-row { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 12px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
   .task-row:hover { border-color: var(--border-hover); }
   .task-row.loading { opacity: 0.55; }
   .task-text .title { font-weight: 500; }
@@ -114,11 +114,25 @@
   .task-tab .count { display: inline-block; background: var(--bg-3); color: var(--fg-muted); font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px; margin-left: 6px; }
   .task-tab.active .count { background: var(--accent); color: #fff; }
 
-  /* toast — transient notification */
-  .app-toast { position: fixed; top: 24px; right: 24px; z-index: 60; padding: 12px 18px; border-radius: var(--radius); font-size: 14px; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.35); animation: toastSlide 0.2s ease-out; }
+  /* toast stack — transient notifications, newest first */
+  .app-toast-stack { position: fixed; top: 24px; right: 24px; z-index: 60; display: flex; flex-direction: column; gap: 8px; max-width: 360px; }
+  .app-toast { padding: 12px 18px; border-radius: var(--radius); font-size: 14px; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.35); animation: toastSlide 0.2s ease-out; }
   .app-toast.kind-ok { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); color: #86efac; }
   .app-toast.kind-err { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; }
   @keyframes toastSlide { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* bulk-select bar on the Tasks page */
+  .bulk-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: var(--radius); margin-bottom: 12px; }
+  .bulk-bar .count { font-weight: 600; color: var(--accent); }
+  .bulk-bar .actions { display: flex; gap: 8px; }
+  .task-select { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; margin-right: 4px; }
+  .task-row.selected { background: rgba(59,130,246,0.08); border-color: var(--accent); }
+  .select-all-row { display: flex; align-items: center; padding: 6px 16px 10px; font-size: 12px; color: var(--fg-muted); }
+  .select-all-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .select-all-row input { accent-color: var(--accent); cursor: pointer; }
+
+  /* keyboard-shortcut hint chips */
+  .kbd { display: inline-block; padding: 1px 6px; background: var(--bg-3); border: 1px solid var(--border); border-radius: 4px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 11px; color: var(--fg-muted); }
 </style>
 </head>
 <body>
@@ -144,8 +158,9 @@ const state = {
   settings: { notifications: true },
   taskQuery: '',            // live-filter string for the tasks list
   editingTaskId: null,      // id of the task currently being edited in modal
-  toast: null,              // { id, message, kind } — transient success/error notification
+  toasts: [],               // array of { id, message, kind } — stack, newest first
   taskFilter: 'all',        // 'all' | 'active' | 'done' — Tasks-page tab filter
+  selectedIds: new Set(),   // set of task ids with the row checkbox checked
 };
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -165,7 +180,7 @@ const store = {
     if (!t) throw new Error('Task title cannot be empty.');
     await delay(200);
     state.tasks.unshift({ id: 't-' + Date.now().toString(36), title: t, createdAt: Date.now(), status: 'active', priority: 'medium' });
-    store.showToast('Task added', 'ok');
+    store.showToast(`Added: ${t}`, 'ok');
   },
   async toggleTask(id) { await delay(150); const t = state.tasks.find((x) => x.id === id); if (t) t.status = t.status === 'done' ? 'active' : 'done'; },
   async deleteTask(id) { await delay(200); state.tasks = state.tasks.filter((t) => t.id !== id); },
@@ -178,11 +193,58 @@ const store = {
     existing.title = t;
   },
   async deleteAccount() { await delay(500); state.tasks = []; state.session = null; },
+  async bulkComplete(ids) {
+    await delay(200);
+    for (const id of ids) {
+      const t = state.tasks.find((x) => x.id === id);
+      if (t) t.status = 'done';
+    }
+    state.selectedIds.clear();
+    store.showToast(`${ids.length} task${ids.length === 1 ? '' : 's'} marked done`, 'ok');
+  },
+  async bulkDelete(ids) {
+    await delay(200);
+    state.tasks = state.tasks.filter((t) => !ids.includes(t.id));
+    state.selectedIds.clear();
+    store.showToast(`${ids.length} task${ids.length === 1 ? '' : 's'} deleted`, 'ok');
+  },
+  toggleSelected(id) {
+    if (state.selectedIds.has(id)) state.selectedIds.delete(id);
+    else state.selectedIds.add(id);
+  },
+  clearSelection() { state.selectedIds.clear(); },
+  exportTasks() {
+    // Build a JSON blob of the current task set. Keeps the export contract
+    // explicit — if the schema ever changes, Alethia asserts on the raw text.
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      team: state.session?.team ?? null,
+      tasks: state.tasks.map((t) => ({ id: t.id, title: t.title, status: t.status, priority: t.priority, createdAt: t.createdAt })),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `atlas-tasks-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    store.showToast(`Exported ${state.tasks.length} tasks`, 'ok');
+  },
   setNotifications(v) { state.settings.notifications = v; },
   setTaskQuery(q) { state.taskQuery = q; },
   setTaskFilter(f) {
     if (!['all', 'active', 'done'].includes(f)) throw new Error('Invalid filter.');
     state.taskFilter = f;
+  },
+  selectAllVisible(ids) {
+    // Select every id in the currently visible slice. Called by the
+    // "Select all" toggle at the top of the task list. If every visible
+    // task is already selected, clear the selection instead (toggle).
+    const allSelected = ids.length > 0 && ids.every((id) => state.selectedIds.has(id));
+    if (allSelected) state.selectedIds.clear();
+    else for (const id of ids) state.selectedIds.add(id);
   },
   openEditModal(id) { state.editingTaskId = id; },
   closeEditModal() { state.editingTaskId = null; },
@@ -193,18 +255,15 @@ const store = {
     if (t) t.priority = priority;
   },
   showToast(message, kind = 'ok') {
-    const id = 'toast-' + Date.now().toString(36);
-    state.toast = { id, message, kind };
+    // Toasts stack newest-first — newer notifications don't trample older
+    // ones. Each auto-dismisses independently after 2s. NLP assertions on
+    // multiple toasts can now verify stacking order.
+    const id = 'toast-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+    state.toasts.unshift({ id, message, kind });
     render();
-    // Toast auto-dismisses after 2s. Real apps usually keep these short —
-    // long enough to be seen, short enough not to clutter the UI. This
-    // duration is also what the safety NLP tests' `assert X is not visible`
-    // assertions count on (they poll up to ~2s for the toast to go away).
     setTimeout(() => {
-      if (state.toast && state.toast.id === id) {
-        state.toast = null;
-        render();
-      }
+      state.toasts = state.toasts.filter((t) => t.id !== id);
+      render();
     }, 2000);
   },
 };
@@ -216,20 +275,70 @@ const currentPath = () => location.hash.replace(/^#/, '') || '/';
 const render = () => {
   const p = currentPath();
   (routes[p] || routes['*'])();
-  // Render toast as a fixed-position overlay after the page renders.
-  // Removed first so a re-render replaces it cleanly.
-  const existing = document.getElementById('app-toast');
-  if (existing) existing.remove();
-  if (state.toast) {
-    const t = document.createElement('div');
-    t.id = 'app-toast';
-    t.className = `app-toast kind-${state.toast.kind}`;
-    t.setAttribute('role', 'status');
-    t.textContent = state.toast.message;
-    document.body.appendChild(t);
+  // Render toasts as a fixed-position stack overlay. Rebuilt from scratch
+  // each render so ordering + dismissal stays in sync with state.toasts.
+  const existingStack = document.getElementById('app-toast-stack');
+  if (existingStack) existingStack.remove();
+  if (state.toasts.length > 0) {
+    const stack = document.createElement('div');
+    stack.id = 'app-toast-stack';
+    stack.className = 'app-toast-stack';
+    for (const t of state.toasts) {
+      const node = document.createElement('div');
+      node.className = `app-toast kind-${t.kind}`;
+      node.setAttribute('role', 'status');
+      node.setAttribute('data-toast-id', t.id);
+      node.textContent = t.message;
+      stack.appendChild(node);
+    }
+    document.body.appendChild(stack);
   }
 };
 window.addEventListener('hashchange', render);
+
+// Global keyboard shortcuts. Skipped when the user is typing in an input or
+// textarea so we don't hijack their keystrokes. All shortcuts are listed in
+// the Settings page so agents can discover them.
+window.addEventListener('keydown', (e) => {
+  const tag = (document.activeElement?.tagName || '').toLowerCase();
+  const typing = tag === 'input' || tag === 'textarea' || tag === 'select';
+
+  // Escape always wins — closes any open modal.
+  if (e.key === 'Escape') {
+    if (state.editingTaskId) { store.closeEditModal(); render(); return; }
+    const modal = document.querySelector('.modal-backdrop');
+    if (modal) modal.remove();
+    return;
+  }
+
+  if (typing) return;
+  if (!state.session) return;
+
+  if (e.key === '/') {
+    e.preventDefault();
+    go('/tasks');
+    // Defer focus to after the render so the input exists.
+    setTimeout(() => { const s = document.getElementById('task-search'); if (s) s.focus(); }, 0);
+    return;
+  }
+  if (e.key === 'n' || e.key === 'N') {
+    e.preventDefault();
+    go('/tasks');
+    setTimeout(() => { const i = document.getElementById('new-task-input'); if (i) i.focus(); }, 0);
+    return;
+  }
+  if (e.key === 'g') {
+    // "g d" → dashboard, "g t" → tasks, "g s" → settings (Gmail-style prefix).
+    const handler = (e2) => {
+      if (e2.key === 'd') go('/dashboard');
+      else if (e2.key === 't') go('/tasks');
+      else if (e2.key === 's') go('/settings');
+      window.removeEventListener('keydown', handler, true);
+    };
+    window.addEventListener('keydown', handler, true);
+    setTimeout(() => window.removeEventListener('keydown', handler, true), 1200);
+  }
+});
 
 // ─── shell ──────────────────────────────────────────────────────────
 const root = document.getElementById('root');
@@ -348,6 +457,21 @@ function renderTasks(main) {
       </div>
       ${q ? `<div style="font-size:12px;color:var(--fg-muted);margin-bottom:8px;">Showing ${visible.length} of ${filtered.length} — filter "${escapeHtml(state.taskQuery)}"</div>` : ''}
 
+      ${state.selectedIds.size > 0 ? `
+      <div class="bulk-bar" role="region" aria-label="Bulk selection">
+        <div><span class="count">${state.selectedIds.size}</span> selected</div>
+        <div class="actions">
+          <button id="bulk-complete-btn" class="btn btn-ghost btn-small">Complete selected</button>
+          <button id="bulk-delete-btn" class="btn btn-danger btn-small">Delete selected</button>
+          <button id="bulk-clear-btn" class="btn btn-ghost btn-small">Clear</button>
+        </div>
+      </div>` : ''}
+
+      ${visible.length > 0 ? `
+      <div class="select-all-row">
+        <label><input type="checkbox" id="select-all-toggle" ${visible.every((t) => state.selectedIds.has(t.id)) ? 'checked' : ''} /> Select all</label>
+      </div>` : ''}
+
       <div class="task-list" id="task-list">
         ${visible.length === 0
           ? `<div class="task-empty">${q ? 'No tasks match your search.' : (f === 'done' ? 'No completed tasks yet.' : f === 'active' ? 'No active tasks — nice work.' : 'No tasks yet. Add one above.')}</div>`
@@ -409,6 +533,32 @@ function renderTasks(main) {
     store.showToast(`Priority updated to ${e.target.value}`, 'ok');
     render();
   }));
+
+  main.querySelectorAll('[data-task-select]').forEach((cb) => cb.addEventListener('change', () => {
+    store.toggleSelected(cb.dataset.taskSelect);
+    render();
+  }));
+
+  const selectAll = document.getElementById('select-all-toggle');
+  if (selectAll) selectAll.addEventListener('change', () => {
+    store.selectAllVisible(visible.map((t) => t.id));
+    render();
+  });
+
+  const bulkComplete = document.getElementById('bulk-complete-btn');
+  const bulkDelete = document.getElementById('bulk-delete-btn');
+  const bulkClear = document.getElementById('bulk-clear-btn');
+  if (bulkComplete) bulkComplete.addEventListener('click', async () => {
+    bulkComplete.disabled = true;
+    await store.bulkComplete(Array.from(state.selectedIds));
+    render();
+  });
+  if (bulkDelete) bulkDelete.addEventListener('click', async () => {
+    bulkDelete.disabled = true;
+    await store.bulkDelete(Array.from(state.selectedIds));
+    render();
+  });
+  if (bulkClear) bulkClear.addEventListener('click', () => { store.clearSelection(); render(); });
 
   // Edit modal — only wired when open.
   if (state.editingTaskId) {
@@ -473,8 +623,10 @@ function renderEditModalHtml() {
 
 function renderTaskRow(t) {
   const done = t.status === 'done';
+  const selected = state.selectedIds.has(t.id);
   return `
-    <div class="task-row" data-task-id="${t.id}">
+    <div class="task-row ${selected ? 'selected' : ''}" data-task-id="${t.id}">
+      <input type="checkbox" class="task-select" aria-label="select ${escapeHtml(t.title)}" data-task-select="${t.id}" ${selected ? 'checked' : ''} />
       <div class="task-text">
         <div class="title">${escapeHtml(t.title)}</div>
         <div class="meta">${done ? 'Completed' : 'Active'} · ${ageLabel(t.createdAt)}</div>
@@ -515,6 +667,23 @@ function renderSettings(main) {
         </label>
       </div>
     </div>
+    <div class="section">
+      <h2>Data</h2>
+      <div class="setting-row">
+        <div class="info">
+          <h3>Export Tasks</h3>
+          <p>Download the current task list as a JSON file. Includes id, title, status, priority, and createdAt.</p>
+        </div>
+        <button id="export-tasks-btn" class="btn btn-ghost">Export Tasks</button>
+      </div>
+    </div>
+    <div class="section">
+      <h2>Keyboard shortcuts</h2>
+      <div class="setting-row"><div class="info"><h3><span class="kbd">/</span> Search tasks</h3><p>Focus the task-search input.</p></div></div>
+      <div class="setting-row"><div class="info"><h3><span class="kbd">n</span> New task</h3><p>Focus the new-task input.</p></div></div>
+      <div class="setting-row"><div class="info"><h3><span class="kbd">g</span> <span class="kbd">d/t/s</span> Go to page</h3><p>Jump to dashboard, tasks, or settings.</p></div></div>
+      <div class="setting-row"><div class="info"><h3><span class="kbd">Esc</span> Close modal</h3><p>Dismiss any open modal.</p></div></div>
+    </div>
     <div class="section" style="border-color: rgba(239,68,68,0.3);">
       <h2 style="color: var(--err);">Danger zone</h2>
       <div class="setting-row">
@@ -527,6 +696,7 @@ function renderSettings(main) {
     </div>`;
   document.getElementById('notifications-toggle').addEventListener('change', (e) => { store.setNotifications(e.target.checked); render(); });
   document.getElementById('delete-account-btn').addEventListener('click', showDeleteAccountModal);
+  document.getElementById('export-tasks-btn').addEventListener('click', () => store.exportTasks());
 }
 
 function showDeleteAccountModal() {

@@ -6,7 +6,7 @@ click Sign in
 click Tasks
 type Draft release notes for v0.2.1 into the new-task field
 click Add task
-assert Task added is visible
+assert Added: Draft release notes for v0.2.1 is visible
 wait 2500
-assert Task added is not visible
+assert Added: Draft release notes for v0.2.1 is not visible
 assert Draft release notes for v0.2.1 is visible

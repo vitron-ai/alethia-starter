@@ -1,0 +1,11 @@
+name atlas bulk complete flow
+navigate to http://127.0.0.1:5173
+type alice@company.com into the email field
+type platform into the team field
+click Sign in
+click Tasks
+click Select all
+assert 3 selected is visible
+click Complete selected
+assert 3 tasks marked done is visible
+assert 0 active is visible

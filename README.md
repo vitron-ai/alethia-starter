@@ -52,6 +52,10 @@ The agent will call `alethia_tell` once per test file and report pass/fail. File
 | `toast-flow.nlp` | Transient toast appears, then auto-dismisses |
 | `count-flow.nlp` | Text-based counters stay consistent after add |
 | `tabs-flow.nlp` | Tab filter (All/Active/Done) narrows the list |
+| `bulk-flow.nlp` | Select-all + bulk complete across the visible tasks |
+| `export-flow.nlp` | Settings → Export Tasks emits JSON + success toast |
+| `shortcuts-flow.nlp` | Keyboard-shortcut legend renders in Settings |
+| `toast-stack-flow.nlp` | Multiple toasts stack newest-first without replacement |
 | `safety.nlp` | **EA1 policy verification** — `expect block:` on Delete Account |
 
 ---

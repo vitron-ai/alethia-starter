@@ -1,0 +1,9 @@
+name atlas export data flow
+navigate to http://127.0.0.1:5173
+type alice@company.com into the email field
+type platform into the team field
+click Sign in
+click Settings
+assert Export Tasks is visible
+click Export Tasks
+assert Exported 3 tasks is visible

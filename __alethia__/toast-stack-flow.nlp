@@ -1,0 +1,13 @@
+name atlas toast stack flow
+navigate to http://127.0.0.1:5173
+type alice@company.com into the email field
+type platform into the team field
+click Sign in
+click Tasks
+type First stacked task into the new-task field
+click Add task
+assert Added: First stacked task is visible
+type Second stacked task into the new-task field
+click Add task
+assert Added: Second stacked task is visible
+assert Added: First stacked task is visible
