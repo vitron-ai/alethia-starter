@@ -1,0 +1,13 @@
+name atlas task edit flow
+navigate to http://127.0.0.1:5173
+type alice@company.com into the email field
+type platform into the team field
+click Sign in
+click Tasks
+assert Review pending deployments is visible
+click Edit
+assert Edit task is visible
+assert Task title is visible
+type Review pending deployments AND staging into the task title field
+click Save changes
+assert Review pending deployments AND staging is visible

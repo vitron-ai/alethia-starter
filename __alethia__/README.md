@@ -9,6 +9,8 @@ This directory is the test suite. Each `.nlp` file is a set of plain-English ins
 | `smoke.nlp` | Sign-in screen renders correctly. The cheapest check. |
 | `signin-flow.nlp` | Happy path — sign in, land on dashboard, nav is present. |
 | `crud-flow.nlp` | Task list exercise — add a task, assert it appears. |
+| `edit-flow.nlp` | Edit-task modal — click Edit → modal opens → update title → Save → verify in list. Tests conditional DOM + pre-filled input replacement. |
+| `search-flow.nlp` | Search filter — type into search box, verify filtered-in tasks appear and filtered-out ones go absent. Exercises `ASSERT_EXISTS` and `assert X is not visible` against a live-filtered list. |
 | `safety.nlp` | EA1 policy verification — `expect block:` on Delete Account. |
 
 ## Running

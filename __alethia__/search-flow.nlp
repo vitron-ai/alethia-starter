@@ -1,0 +1,16 @@
+name atlas task search flow
+navigate to http://127.0.0.1:5173
+type alice@company.com into the email field
+type platform into the team field
+click Sign in
+click Tasks
+assert Review pending deployments is visible
+assert Audit Q2 access logs is visible
+assert Rotate Vault credentials is visible
+type Vault into the task-search field
+assert Rotate Vault credentials is visible
+assert Review pending deployments is not visible
+assert Audit Q2 access logs is not visible
+click Clear
+assert Review pending deployments is visible
+assert Audit Q2 access logs is visible

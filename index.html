@@ -122,6 +122,8 @@ const state = {
     { id: 'seed-3', title: 'Rotate Vault credentials', createdAt: Date.now() - 86400_000, status: 'done' },
   ],
   settings: { notifications: true },
+  taskQuery: '',            // live-filter string for the tasks list
+  editingTaskId: null,      // id of the task currently being edited in modal
 };
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -144,8 +146,19 @@ const store = {
   },
   async toggleTask(id) { await delay(150); const t = state.tasks.find((x) => x.id === id); if (t) t.status = t.status === 'done' ? 'active' : 'done'; },
   async deleteTask(id) { await delay(200); state.tasks = state.tasks.filter((t) => t.id !== id); },
+  async updateTask(id, title) {
+    const t = title.trim();
+    if (!t) throw new Error('Task title cannot be empty.');
+    await delay(200);
+    const existing = state.tasks.find((x) => x.id === id);
+    if (!existing) throw new Error('Task not found.');
+    existing.title = t;
+  },
   async deleteAccount() { await delay(500); state.tasks = []; state.session = null; },
   setNotifications(v) { state.settings.notifications = v; },
+  setTaskQuery(q) { state.taskQuery = q; },
+  openEditModal(id) { state.editingTaskId = id; },
+  closeEditModal() { state.editingTaskId = null; },
 };
 
 // ─── router ─────────────────────────────────────────────────────────
@@ -235,10 +248,15 @@ function renderDashboard(main) {
 }
 
 function renderTasks(main) {
+  const q = state.taskQuery.trim().toLowerCase();
+  const visible = q
+    ? state.tasks.filter((t) => t.title.toLowerCase().includes(q))
+    : state.tasks;
+
   main.innerHTML = `
     <div class="page-head">
       <h1>Tasks</h1>
-      <p>Add, complete, or remove tasks. Each action is an async call that exercises loading states.</p>
+      <p>Add, complete, edit, search, or remove tasks. Each action is an async call that exercises loading states.</p>
     </div>
     <div class="section">
       <div class="add-task-row">
@@ -246,12 +264,21 @@ function renderTasks(main) {
         <button id="add-task-btn" class="btn btn-primary">Add task</button>
       </div>
       <div id="add-task-error" class="error-text" role="alert" style="margin-bottom:8px;"></div>
-      <div class="task-list" id="task-list">
-        ${state.tasks.length === 0
-          ? `<div class="task-empty">No tasks yet. Add one above.</div>`
-          : state.tasks.map(renderTaskRow).join('')}
+
+      <div class="add-task-row" style="margin-top:4px;">
+        <input id="task-search" type="search" placeholder="Search tasks…" autocomplete="off" name="task-search" value="${escapeHtml(state.taskQuery)}" />
+        ${q ? '<button id="clear-search-btn" class="btn btn-ghost">Clear</button>' : ''}
       </div>
-    </div>`;
+      ${q ? `<div style="font-size:12px;color:var(--fg-muted);margin-bottom:8px;">Showing ${visible.length} of ${state.tasks.length} — filter "${escapeHtml(state.taskQuery)}"</div>` : ''}
+
+      <div class="task-list" id="task-list">
+        ${visible.length === 0
+          ? `<div class="task-empty">${q ? 'No tasks match your search.' : 'No tasks yet. Add one above.'}</div>`
+          : visible.map(renderTaskRow).join('')}
+      </div>
+    </div>
+    ${state.editingTaskId ? renderEditModalHtml() : ''}`;
+
   const input = document.getElementById('new-task-input');
   const addBtn = document.getElementById('add-task-btn');
   const err = document.getElementById('add-task-error');
@@ -265,6 +292,21 @@ function renderTasks(main) {
   };
   addBtn.addEventListener('click', submit);
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+
+  // Search box — filters the visible list as you type. Each keystroke
+  // re-renders, so new DOM churn here is a great stress test for
+  // Alethia's auto-wait against a live-updating list.
+  const searchInput = document.getElementById('task-search');
+  searchInput.addEventListener('input', (e) => {
+    store.setTaskQuery(e.target.value);
+    render();
+    // Restore focus + caret after re-render.
+    const s = document.getElementById('task-search');
+    if (s) { s.focus(); s.selectionStart = s.selectionEnd = s.value.length; }
+  });
+  const clearBtn = document.getElementById('clear-search-btn');
+  if (clearBtn) clearBtn.addEventListener('click', () => { store.setTaskQuery(''); render(); });
+
   main.querySelectorAll('[data-task-toggle]').forEach((b) => b.addEventListener('click', async () => {
     b.closest('.task-row').classList.add('loading');
     await store.toggleTask(b.dataset.taskToggle);
@@ -275,6 +317,70 @@ function renderTasks(main) {
     await store.deleteTask(b.dataset.taskDelete);
     render();
   }));
+  main.querySelectorAll('[data-task-edit]').forEach((b) => b.addEventListener('click', () => {
+    store.openEditModal(b.dataset.taskEdit);
+    render();
+  }));
+
+  // Edit modal — only wired when open.
+  if (state.editingTaskId) {
+    const task = state.tasks.find((t) => t.id === state.editingTaskId);
+    if (!task) { store.closeEditModal(); return; }
+    const titleInput = document.getElementById('edit-task-title');
+    const saveBtn = document.getElementById('edit-task-save-btn');
+    const cancelBtn = document.getElementById('edit-task-cancel-btn');
+    const editErr = document.getElementById('edit-task-error');
+    const backdrop = document.getElementById('edit-task-modal');
+
+    titleInput.focus();
+    titleInput.setSelectionRange(0, titleInput.value.length);
+
+    const save = async () => {
+      editErr.textContent = '';
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Saving…';
+      try {
+        await store.updateTask(task.id, titleInput.value);
+        store.closeEditModal();
+        render();
+      } catch (e) {
+        editErr.textContent = e.message;
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save changes';
+      }
+    };
+    saveBtn.addEventListener('click', save);
+    titleInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') save();
+      if (e.key === 'Escape') { store.closeEditModal(); render(); }
+    });
+    cancelBtn.addEventListener('click', () => { store.closeEditModal(); render(); });
+    // Click outside (on the backdrop) to dismiss.
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) { store.closeEditModal(); render(); }
+    });
+  }
+}
+
+function renderEditModalHtml() {
+  const task = state.tasks.find((t) => t.id === state.editingTaskId);
+  if (!task) return '';
+  return `
+    <div class="modal-backdrop" id="edit-task-modal">
+      <div class="modal">
+        <h3>Edit task</h3>
+        <p>Update the task title. Press Enter to save, Escape to cancel.</p>
+        <div class="field">
+          <label for="edit-task-title">Task title</label>
+          <input id="edit-task-title" type="text" value="${escapeHtml(task.title)}" autocomplete="off" />
+        </div>
+        <div id="edit-task-error" class="error-text" role="alert" style="margin-bottom:12px;"></div>
+        <div class="modal-actions">
+          <button id="edit-task-cancel-btn" class="btn btn-ghost">Cancel</button>
+          <button id="edit-task-save-btn" class="btn btn-primary">Save changes</button>
+        </div>
+      </div>
+    </div>`;
 }
 
 function renderTaskRow(t) {
@@ -288,6 +394,7 @@ function renderTaskRow(t) {
       <div class="task-actions">
         <span class="task-status ${done ? 'done' : 'active'}">${done ? 'Done' : 'Active'}</span>
         <button class="btn btn-ghost btn-small" data-task-toggle="${t.id}">${done ? 'Reopen' : 'Complete'}</button>
+        <button class="btn btn-ghost btn-small" data-task-edit="${t.id}">Edit</button>
         <button class="btn btn-danger btn-small" data-task-delete="${t.id}">Delete</button>
       </div>
     </div>`;
