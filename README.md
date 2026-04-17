@@ -129,7 +129,7 @@ Alethia is a **local-only** runtime by design. The signed binary refuses to navi
 
 Why: Alethia's zero-IPC execution would make it an ideal credential-stuffing / account-takeover / abuse-automation tool if turned against the open web. It will not become that tool. For partner-specific production-origin access, contact **gatekeeper@vitron.ai** — we issue custom-signed builds; we do not ship configurability.
 
-Full posture at [vitron-ai/alethia/SECURITY.md](https://github.com/vitron-ai/alethia/blob/main/SECURITY.md).
+Full posture at [vitron.ai/safety](https://vitron.ai/safety).
 
 ## License
 
