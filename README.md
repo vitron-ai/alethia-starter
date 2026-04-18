@@ -43,20 +43,20 @@ The agent will call `alethia_tell` once per test file and report pass/fail. File
 
 | File | What it tests |
 |---|---|
-| `smoke.nlp` | Sign-in screen renders |
-| `signin-flow.nlp` | Happy path — sign in, land on dashboard, nav is present |
-| `crud-flow.nlp` | Task list — add, assert it appears |
-| `edit-flow.nlp` | Inline editing — open modal, change title, save |
-| `search-flow.nlp` | Live-filter search box narrows the task list |
-| `priority-flow.nlp` | Priority dropdown updates a task + confirms via toast |
-| `toast-flow.nlp` | Transient toast appears, then auto-dismisses |
-| `count-flow.nlp` | Text-based counters stay consistent after add |
-| `tabs-flow.nlp` | Tab filter (All/Active/Done) narrows the list |
-| `bulk-flow.nlp` | Select-all + bulk complete across the visible tasks |
-| `export-flow.nlp` | Settings → Export Tasks emits JSON + success toast |
-| `shortcuts-flow.nlp` | Keyboard-shortcut legend renders in Settings |
-| `toast-stack-flow.nlp` | Multiple toasts stack newest-first without replacement |
-| `safety.nlp` | **EA1 policy verification** — `expect block:` on Delete Account |
+| `smoke.alethia` | Sign-in screen renders |
+| `signin-flow.alethia` | Happy path — sign in, land on dashboard, nav is present |
+| `crud-flow.alethia` | Task list — add, assert it appears |
+| `edit-flow.alethia` | Inline editing — open modal, change title, save |
+| `search-flow.alethia` | Live-filter search box narrows the task list |
+| `priority-flow.alethia` | Priority dropdown updates a task + confirms via toast |
+| `toast-flow.alethia` | Transient toast appears, then auto-dismisses |
+| `count-flow.alethia` | Text-based counters stay consistent after add |
+| `tabs-flow.alethia` | Tab filter (All/Active/Done) narrows the list |
+| `bulk-flow.alethia` | Select-all + bulk complete across the visible tasks |
+| `export-flow.alethia` | Settings → Export Tasks emits JSON + success toast |
+| `shortcuts-flow.alethia` | Keyboard-shortcut legend renders in Settings |
+| `toast-stack-flow.alethia` | Multiple toasts stack newest-first without replacement |
+| `safety.alethia` | **EA1 policy verification** — `expect block:` on Delete Account |
 
 ---
 
@@ -66,7 +66,7 @@ This repo ships a GitHub Actions workflow at [`.github/workflows/alethia.yml`](.
 
 1. Starts Atlas on a static server
 2. Installs xvfb + Electron's Linux deps
-3. Runs [`__alethia__/ci-runner.mjs`](./__alethia__/ci-runner.mjs) — a tiny stdio MCP client that pipes every `.nlp` file through `@vitronai/alethia` and fails the build on the first red step
+3. Runs [`__alethia__/ci-runner.mjs`](./__alethia__/ci-runner.mjs) — a tiny stdio MCP client that pipes every `.alethia` file through `@vitronai/alethia` and fails the build on the first red step
 
 To run the same flow locally:
 
@@ -76,6 +76,17 @@ node __alethia__/ci-runner.mjs
 ```
 
 The runner respects `ALETHIA_TARGET` if your app runs on a different port.
+
+### Reporter options
+
+```bash
+node __alethia__/ci-runner.mjs --reporter pretty   # default — full summary, EA1 activity, slowest tests
+node __alethia__/ci-runner.mjs --reporter plain    # one-line-per-test minimal output (good for logs)
+node __alethia__/ci-runner.mjs --reporter json     # structured output for agent consumption
+node __alethia__/ci-runner.mjs --only safety       # run a single test by name
+```
+
+Set `NO_COLOR=1` to disable ANSI colors. Status badges: `[PASS]` green, `[FAIL]` red, `[BLOCK]` blue (policy-verified via `expect block:`).
 
 ---
 
@@ -94,7 +105,7 @@ If any of those surfaces break under a future Alethia release, the tests in `__a
 
 ## `expect block:` — the verifiable-safety primitive
 
-The `safety.nlp` file ends with:
+The `safety.alethia` file ends with:
 
 ```
 expect block: click Delete Account
