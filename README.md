@@ -1,6 +1,6 @@
 # alethia-starter
 
-[![alethia](https://github.com/vitron-ai/alethia-starter/actions/workflows/alethia.yml/badge.svg)](https://github.com/vitron-ai/alethia-starter/actions/workflows/alethia.yml)
+[![alethia](https://github.com/vitron-ai/alethia-starter/actions/workflows/alethia.yml/badge.svg?branch=main)](https://github.com/vitron-ai/alethia-starter/actions/workflows/alethia.yml?query=branch%3Amain)
 [![alethia verified](https://img.shields.io/badge/alethia-verified-22c55e?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48L3N2Zz4=)](https://github.com/vitron-ai/alethia)
 [![npm](https://img.shields.io/npm/v/%40vitronai%2Falethia?label=%40vitronai%2Falethia&color=3b82f6)](https://www.npmjs.com/package/@vitronai/alethia)
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
