@@ -38,7 +38,7 @@ jobs:
 
       - name: Install Alethia
         run: |
-          npm install -g @vitronai/alethia@^0.3.28
+          npm install -g @vitronai/alethia@latest
           alethia-mcp --version
 
       - name: Serve Atlas on :5173
