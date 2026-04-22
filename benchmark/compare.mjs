@@ -70,11 +70,12 @@ const stats = (timings) => {
 
 // Spawn a command, measure wall time from spawn to exit. Resolves with the
 // elapsed ms (or null on non-zero exit). Stderr is captured for diagnosis.
-const timeRun = (cmd, args, env = {}) => new Promise((resolvePromise) => {
+const timeRun = (cmd, args, env = {}, cwd = undefined) => new Promise((resolvePromise) => {
   const started = performance.now();
   const proc = spawn(cmd, args, {
     env: { ...process.env, ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
+    cwd,
   });
   let stdout = '';
   let stderr = '';
@@ -101,11 +102,14 @@ const runAlethiaOnce = (flow) =>
 const runPlaywrightOnce = (flow) =>
   timeRun('npx', [
     'playwright', 'test',
-    '--config', join(__dirname, 'playwright.config.ts'),
-    join(__dirname, 'playwright-flows', `${flow}.spec.ts`),
+    `playwright-flows/${flow}.spec.ts`,
   ], {
     CI: '1',
-  });
+    // Playwright uses its own headless mode; the DISPLAY inherited from
+    // xvfb-run can confuse Chromium launch. Unset it so Playwright's
+    // headless launch is unambiguous.
+    DISPLAY: '',
+  }, join(__dirname));
 
 const formatRow = (flow, aleth, pw) => {
   const ratio = pw.meanMs / aleth.meanMs;
@@ -142,14 +146,18 @@ async function main() {
       process.stdout.write(`  iter ${i + 1}/${ITERATIONS} alethia...`);
       const a = await runAlethiaOnce(flow);
       if (!a.ok) {
-        console.error(`\n    alethia FAILED on ${flow}: exit ${a.code}\n${a.stderr.slice(-500)}`);
+        console.error(`\n    alethia FAILED on ${flow}: exit ${a.code}`);
+        console.error('--- stderr ---\n' + (a.stderr || '(empty)'));
+        console.error('--- stdout ---\n' + (a.stdout || '(empty)'));
         process.exit(1);
       }
       alethTimings.push(a.elapsedMs);
       process.stdout.write(` ${Math.round(a.elapsedMs)}ms  playwright...`);
       const p = await runPlaywrightOnce(flow);
       if (!p.ok) {
-        console.error(`\n    playwright FAILED on ${flow}: exit ${p.code}\n${p.stderr.slice(-500)}`);
+        console.error(`\n    playwright FAILED on ${flow}: exit ${p.code}`);
+        console.error('--- stderr ---\n' + (p.stderr || '(empty)'));
+        console.error('--- stdout ---\n' + (p.stdout || '(empty)'));
         process.exit(1);
       }
       pwTimings.push(p.elapsedMs);
