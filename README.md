@@ -89,7 +89,7 @@ npm run playwright:install --prefix benchmark
 npm install -g @vitronai/alethia@latest
 
 python3 -m http.server 5173 &
-node benchmark/compare.mjs --iterations 10
+ALETHIA_HEADLESS=1 node benchmark/compare.mjs --iterations 10
 ```
 
 Prints a comparison table; writes `benchmark/results.json`. Takes ~3–5 min for N=10. Committed baseline numbers from a reference machine live in `benchmark/baseline.json`. Full methodology, flag list, and honest caveats in [`benchmark/README.md`](./benchmark/README.md).

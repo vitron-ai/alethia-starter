@@ -1,20 +1,31 @@
 # Benchmark — Alethia vs Playwright
 
-Reproducibility kit for the *"dramatically faster than CDP-based tools"* claim. Same app. Same flows. Same machine. Your numbers.
+Reproducibility kit for the per-call cost an agent pays when it makes tool calls against a running app. Same app, same flows, same machine. Your numbers.
 
 ## What this measures
 
-Per-invocation wall time for three representative flows against the Atlas starter app, in both **Alethia** (via the `@vitronai/alethia` MCP bridge) and **Playwright**.
+Three flows against the Atlas starter app:
 
 - `smoke` — navigate + four text assertions
 - `signin` — navigate + two form fills + click + three post-state assertions
 - `crud` — navigate + signin + nav click + assertion + form fill + click + assertion
 
-Each flow runs N times in each framework. We report mean, p50, p95, min, max, and the mean speedup ratio.
+Each flow runs N+1 times per framework. Playwright's CLI is per-invocation — every `playwright test` is a fresh process. The benchmark reports both the first call (includes one-time setup cost) and the mean of calls 2..N (steady-state per-call cost).
 
-**What's included in the timing:** everything a CI pipeline actually pays on each invocation — process spawn, framework init, browser setup, test execution, teardown. Both frameworks pay this on every call; neither gets a free ride.
+Reported per flow:
 
-**What's excluded:** batch-mode test execution. If you run 100 Alethia steps in one `alethia_tell` call vs 100 Playwright steps in one test file, the per-step cost is very different than this benchmark shows (both frameworks amortize spawn). That scenario is measured elsewhere; this one measures the single-invocation cost an **agent** pays on each tool call, because agents don't batch.
+| Metric | What it is | When it matters |
+|---|---|---|
+| **Alethia cold** | First call's wall time. Includes one-time setup. | Paid once per agent session. |
+| **Alethia subsequent** | Mean of calls 2..N. | Every call after the first — agent-typical. |
+| **Playwright** | Mean of N fresh CLI invocations. | Every call. |
+| **Speedup** | `Playwright mean / Alethia subsequent mean`. | Grows with session length. |
+
+## Why this is the right benchmark
+
+Agents don't invoke-and-exit. A single agent session makes many `alethia_tell` calls over minutes or hours. Playwright's CLI pays a full browser spawn on every single invocation; there is no CLI mode that avoids this.
+
+If you measure only the first call of a session, you're measuring initialization, not workflow. If you measure the cost of the Nth call, you see what agents actually experience.
 
 ## Reproducing locally
 
@@ -27,50 +38,44 @@ npm install -g @vitronai/alethia@latest
 # Serve Atlas:
 python3 -m http.server 5173 &
 
-# Run the comparison (takes ~3–5 min for N=10):
-node benchmark/compare.mjs --iterations 10
+# Run the comparison (~3–5 min for N=10).
+# ALETHIA_HEADLESS=1 matches Playwright's headless default for a clean
+# apples-to-apples comparison. Drop it if you want to watch the run in
+# the Alethia cockpit.
+ALETHIA_HEADLESS=1 node benchmark/compare.mjs --iterations 10
 ```
 
-Results print to stdout as a table and also land in `benchmark/results.json`.
+Results print to stdout as a table and land in `benchmark/results.json` + `benchmark/results.html` (shareable single-file report).
 
 ### Flags
 
-- `--iterations <N>` — iterations per flow per framework. Default 10. More = tighter confidence interval, longer wait.
-- `--only <flow>` — run just one of `smoke | signin | crud`. Useful for iteration.
+- `--iterations <N>` — measured iterations per flow per framework. Default 10. Alethia runs one additional cold iteration (reported separately, not included in the subsequent-call mean).
+- `--only <flow>` — run just one of `smoke | signin | crud`.
 - `--target <url>` — non-default Atlas URL.
 
 ## Interpreting the output
 
-Example run on a 2022 MacBook Air M2 (see `baseline.json` for the exact environment):
-
 ```
-Flow      Alethia     Alethia     Playwright  Playwright  Speedup
-          mean        p95         mean        p95         (mean)
-─────────────────────────────────────────────────────────────
-smoke     <tbd>ms     <tbd>ms     <tbd>ms     <tbd>ms     <tbd>×
-signin    <tbd>ms     <tbd>ms     <tbd>ms     <tbd>ms     <tbd>×
-crud      <tbd>ms     <tbd>ms     <tbd>ms     <tbd>ms     <tbd>×
+Flow      Alethia cold   Alethia subseq  Alethia p95    Playwright     Speedup
+          (1st call)     (mean 2..N)                    (mean)
+─────────────────────────────────────────────────────────────────────────────
+smoke     <tbd>ms        <tbd>ms         <tbd>ms        <tbd>ms        <tbd>×
+signin    <tbd>ms        <tbd>ms         <tbd>ms        <tbd>ms        <tbd>×
+crud      <tbd>ms        <tbd>ms         <tbd>ms        <tbd>ms        <tbd>×
 ```
 
-*Run the benchmark locally to fill in the values; or see `baseline.json` for the committed reference numbers.*
-
-## What drives the gap
-
-- **No remote-debugging-protocol overhead.** Alethia drives the page directly; Playwright routes every step through CDP serialization.
-- **No browser-launch tax per invocation.** Playwright spawns Chromium on every test invocation. Alethia's runtime is already running; successive `alethia_tell` calls reuse it.
-- **No long-lived test harness state.** Both frameworks do per-invocation cleanup, but Alethia's is lighter because it has less state to clean.
+*Run the benchmark locally to fill in values; open `benchmark/results.html` for a shareable visual report.*
 
 ## Caveats (honest)
 
-- **Single-machine results vary by hardware.** The baseline numbers in `baseline.json` are from one reference machine. Your laptop will be faster or slower depending on CPU, memory pressure, and background load.
-- **First invocation is slower than subsequent ones for both frameworks.** The harness warms each framework once before measuring; the warmup invocation is discarded.
-- **This isn't a "best-case" number for Alethia.** A single `alethia_tell` call containing all three flows' NLP batched together would be dramatically faster per-step than this shows. We don't benchmark that scenario here because it doesn't match how agents call tools.
-- **Playwright configured for minimum overhead.** No trace, no video, no screenshots, no retries, single worker. If you enable those, Playwright's numbers get worse — this benchmark doesn't unfairly advantage Alethia by comparing against a dressed-up Playwright.
+- **Per-call subsequent cost is the headline.** The first call in an agent session includes one-time setup; it's reported separately in the `Alethia cold` column so you can see it. Agents making multiple calls in a session amortize that first-call cost.
+- **Playwright configured for minimum overhead.** No trace, no video, no screenshots, no retries, single worker. Enable those and Playwright's numbers get worse — this benchmark doesn't advantage Alethia by comparing against a dressed-up Playwright.
+- **Hardware varies.** The CI numbers are from a GitHub Actions Ubuntu runner. Your laptop will differ based on CPU, memory pressure, and background load.
 
 ## CI
 
-The `alethia` GitHub Actions workflow runs this benchmark on every push to `main`. Results upload as a build artifact named `benchmark-results`. A significant regression (Alethia ≥ 2× slower than its baseline) fails the build.
+The `alethia` GitHub Actions workflow runs this benchmark on every push to `main`. The HTML report uploads as a build artifact named `benchmark-report` — download it from the Actions tab and open in any browser.
 
 ## Reporting inconsistencies
 
-If your local numbers materially disagree with the committed `baseline.json` on comparable hardware — or if you find a scenario where Alethia is slower — please open an issue. We want the numbers to be defensible; we'd rather fix the benchmark or the runtime than overclaim.
+If your local numbers materially disagree with our CI numbers on comparable hardware, please open an issue. We want the numbers to be defensible; we'd rather fix the benchmark than overclaim.

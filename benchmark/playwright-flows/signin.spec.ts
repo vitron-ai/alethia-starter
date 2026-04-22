@@ -8,6 +8,6 @@ test('atlas signin happy-path', async ({ page }) => {
   await page.getByLabel('Team').fill('platform');
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByText('Welcome')).toBeVisible();
-  await expect(page.getByText('Tasks')).toBeVisible();
-  await expect(page.getByText('Settings')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Tasks' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
 });

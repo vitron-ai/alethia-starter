@@ -1,0 +1,6 @@
+# Per-run benchmark output — changes every invocation, not reproducible.
+# If you want to commit a reference run, copy to baseline.json instead.
+results.json
+
+# Playwright failure artifacts (traces, screenshots, context dumps).
+test-results/

@@ -137,6 +137,9 @@ jobs:
         env:
           ELECTRON_DISABLE_SANDBOX: '1'
           ALETHIA_BRIDGE: alethia-mcp
+          # Match Playwright's headless default for a clean apples-to-apples
+          # comparison. Both frameworks run with no visible UI.
+          ALETHIA_HEADLESS: '1'
         run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
             node benchmark/compare.mjs --iterations 10
@@ -145,25 +148,16 @@ jobs:
         if: always()
         run: |
           if [ -f benchmark/results.json ]; then
-            echo "## Benchmark results" >> "$GITHUB_STEP_SUMMARY"
+            echo "## Benchmark — Alethia vs Playwright (agent workflow)" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo '| Flow | Alethia mean | Alethia p95 | Playwright mean | Playwright p95 | Speedup (mean) |' >> "$GITHUB_STEP_SUMMARY"
+            echo "Per-call cost an agent pays across a workflow. Alethia subseq = mean of calls 2..N. Playwright = mean of N fresh CLI invocations." >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '| Flow | Alethia cold (1st call) | Alethia subseq (mean 2..N) | Alethia p95 | Playwright (mean) | Speedup |' >> "$GITHUB_STEP_SUMMARY"
             echo '|---|---|---|---|---|---|' >> "$GITHUB_STEP_SUMMARY"
             node -e "
               const r = JSON.parse(require('fs').readFileSync('benchmark/results.json','utf8'));
               for (const [flow, v] of Object.entries(r.flows)) {
-                console.log(\`| \${flow} | \${v.alethia.meanMs}ms | \${v.alethia.p95Ms}ms | \${v.playwright.meanMs}ms | \${v.playwright.p95Ms}ms | \${v.speedupMean.toFixed(1)}× |\`);
+                console.log(\`| \${flow} | \${Math.round(v.alethia.coldMs)}ms | \${v.alethia.subseq.meanMs}ms | \${v.alethia.subseq.p95Ms}ms | \${v.playwright.meanMs}ms | \${v.speedup.toFixed(1)}× |\`);
               }
             " >> "$GITHUB_STEP_SUMMARY"
           fi
-
-      - name: Upload benchmark results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: benchmark-results
-          path: |
-            benchmark/results.json
-            /tmp/atlas-server.log
-          if-no-files-found: warn
-          retention-days: 30
