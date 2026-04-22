@@ -162,5 +162,14 @@ jobs:
               }
             " >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "Numbers are the steady-state cost per call in a multi-call agent session. Alethia's first call in a session pays a one-time setup cost; see \`results.json\` for full stats." >> "$GITHUB_STEP_SUMMARY"
+            echo "Full per-iteration stats (p50, p95, min, max) in the \`benchmark-results\` artifact below." >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark/results.json
+          if-no-files-found: warn
+          retention-days: 30
