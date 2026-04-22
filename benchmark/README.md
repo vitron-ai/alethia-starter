@@ -4,11 +4,12 @@ Reproducibility kit for the per-call cost an agent pays when it makes tool calls
 
 ## What this measures
 
-Three flows against the Atlas starter app:
+Four flows against the Atlas starter app:
 
-- `smoke` — navigate + four text assertions
-- `signin` — navigate + two form fills + click + three post-state assertions
-- `crud` — navigate + signin + nav click + assertion + form fill + click + assertion
+- `smoke` — page loads, key UI renders (navigate + four text assertions)
+- `signin` — sign in with valid credentials, land on dashboard
+- `crud` — sign in, add a task, verify it appears in the list
+- `search` — sign in, type in the search box, verify the list filters, clear and restore
 
 Each flow runs N+1 times per framework. Playwright's CLI is per-invocation — every `playwright test` is a fresh process. The benchmark reports both the first call (includes one-time setup cost) and the mean of calls 2..N (steady-state per-call cost).
 
@@ -50,7 +51,7 @@ Results print to stdout as a table and land in `benchmark/results.json` + `bench
 ### Flags
 
 - `--iterations <N>` — measured iterations per flow per framework. Default 10. Alethia runs one additional cold iteration (reported separately, not included in the subsequent-call mean).
-- `--only <flow>` — run just one of `smoke | signin | crud`.
+- `--only <flow>` — run just one of `smoke | signin | crud | search`.
 - `--target <url>` — non-default Atlas URL.
 
 ## Interpreting the output

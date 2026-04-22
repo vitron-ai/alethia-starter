@@ -152,13 +152,13 @@ jobs:
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "How long each framework takes to run a single test flow in an agent workflow. Lower is better." >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo '| Flow | Alethia | Playwright | Alethia is |' >> "$GITHUB_STEP_SUMMARY"
-            echo '|---|---|---|---|' >> "$GITHUB_STEP_SUMMARY"
+            echo '| Flow | What it tests | Alethia | Playwright | Alethia is |' >> "$GITHUB_STEP_SUMMARY"
+            echo '|---|---|---|---|---|' >> "$GITHUB_STEP_SUMMARY"
             node -e "
               const fmt = (ms) => ms >= 1000 ? (ms/1000).toFixed(2) + 's' : Math.round(ms) + 'ms';
               const r = JSON.parse(require('fs').readFileSync('benchmark/results.json','utf8'));
               for (const [flow, v] of Object.entries(r.flows)) {
-                console.log(\`| \${flow} | \${fmt(v.alethia.subseq.meanMs)} | \${fmt(v.playwright.meanMs)} | **\${v.speedup.toFixed(1)}× faster** |\`);
+                console.log(\`| \${flow} | \${v.description || ''} | \${fmt(v.alethia.subseq.meanMs)} | \${fmt(v.playwright.meanMs)} | **\${v.speedup.toFixed(1)}× faster** |\`);
               }
             " >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"

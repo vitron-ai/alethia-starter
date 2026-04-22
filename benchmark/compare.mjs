@@ -41,13 +41,23 @@ const TARGET = getArg('--target', 'http://127.0.0.1:5173');
 const ONLY = getArg('--only', null);
 const BRIDGE_CMD = (process.env.ALETHIA_BRIDGE || 'alethia-mcp').split(/\s+/);
 
-const FLOWS = ['smoke', 'signin', 'crud'].filter(name => !ONLY || ONLY === name);
+const FLOWS = ['smoke', 'signin', 'crud', 'search'].filter(name => !ONLY || ONLY === name);
 
 // Alethia flow filenames (live in __alethia__/ at the starter root).
 const ALETHIA_FILES = {
   smoke: 'smoke.alethia',
   signin: 'signin-flow.alethia',
   crud: 'crud-flow.alethia',
+  search: 'search-flow.alethia',
+};
+
+// Short descriptions of what each flow exercises — used by the CI step
+// summary so anyone skimming a PR sees what the numbers actually mean.
+const FLOW_DESCRIPTIONS = {
+  smoke: 'Page loads, key UI renders',
+  signin: 'Sign in, land on dashboard',
+  crud: 'Sign in, add a task, verify it appears',
+  search: 'Sign in, search tasks, verify filter narrows',
 };
 
 // Summary statistics for a set of timings (milliseconds).
@@ -304,6 +314,7 @@ async function main() {
     const pw = stats(pwTimings);
 
     results.flows[flow] = {
+      description: FLOW_DESCRIPTIONS[flow] ?? '',
       alethia: {
         coldMs: Math.round(coldMs * 10) / 10,
         subseq,
