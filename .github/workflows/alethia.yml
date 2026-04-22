@@ -148,16 +148,19 @@ jobs:
         if: always()
         run: |
           if [ -f benchmark/results.json ]; then
-            echo "## Benchmark — Alethia vs Playwright (agent workflow)" >> "$GITHUB_STEP_SUMMARY"
+            echo "## Benchmark — Alethia vs Playwright" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "Per-call cost an agent pays across a workflow. Alethia subseq = mean of calls 2..N. Playwright = mean of N fresh CLI invocations." >> "$GITHUB_STEP_SUMMARY"
+            echo "How long each framework takes to run a single test flow in an agent workflow. Lower is better." >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo '| Flow | Alethia cold (1st call) | Alethia subseq (mean 2..N) | Alethia p95 | Playwright (mean) | Speedup |' >> "$GITHUB_STEP_SUMMARY"
-            echo '|---|---|---|---|---|---|' >> "$GITHUB_STEP_SUMMARY"
+            echo '| Flow | Alethia | Playwright | Alethia is |' >> "$GITHUB_STEP_SUMMARY"
+            echo '|---|---|---|---|' >> "$GITHUB_STEP_SUMMARY"
             node -e "
+              const fmt = (ms) => ms >= 1000 ? (ms/1000).toFixed(2) + 's' : Math.round(ms) + 'ms';
               const r = JSON.parse(require('fs').readFileSync('benchmark/results.json','utf8'));
               for (const [flow, v] of Object.entries(r.flows)) {
-                console.log(\`| \${flow} | \${Math.round(v.alethia.coldMs)}ms | \${v.alethia.subseq.meanMs}ms | \${v.alethia.subseq.p95Ms}ms | \${v.playwright.meanMs}ms | \${v.speedup.toFixed(1)}× |\`);
+                console.log(\`| \${flow} | \${fmt(v.alethia.subseq.meanMs)} | \${fmt(v.playwright.meanMs)} | **\${v.speedup.toFixed(1)}× faster** |\`);
               }
             " >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Numbers are the steady-state cost per call in a multi-call agent session. Alethia's first call in a session pays a one-time setup cost; see \`results.json\` for full stats." >> "$GITHUB_STEP_SUMMARY"
           fi
