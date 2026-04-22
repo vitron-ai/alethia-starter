@@ -162,7 +162,7 @@ jobs:
               }
             " >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "Full per-iteration stats (p50, p95, min, max) in the \`benchmark-results\` artifact below." >> "$GITHUB_STEP_SUMMARY"
+            echo "Full per-iteration stats (p50, p95, min, max) are in the [\`benchmark-results\` artifact](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}#artifacts) for this run." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload benchmark results
