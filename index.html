@@ -256,15 +256,17 @@ const store = {
   },
   showToast(message, kind = 'ok') {
     // Toasts stack newest-first — newer notifications don't trample older
-    // ones. Each auto-dismisses independently after 2s. NLP assertions on
-    // multiple toasts can now verify stacking order.
+    // ones. Each auto-dismisses independently after 4s. NLP assertions on
+    // multiple toasts can now verify stacking order. 4s matches standard
+    // notification UX and gives assertion retry-windows room to breathe
+    // on slower CI hardware (xvfb + virtualization on GitHub runners).
     const id = 'toast-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
     state.toasts.unshift({ id, message, kind });
     render();
     setTimeout(() => {
       state.toasts = state.toasts.filter((t) => t.id !== id);
       render();
-    }, 2000);
+    }, 4000);
   },
 };
 
