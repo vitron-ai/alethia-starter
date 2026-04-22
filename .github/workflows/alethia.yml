@@ -83,3 +83,87 @@ jobs:
             ~/.alethia/logs/**
           if-no-files-found: ignore
           retention-days: 7
+
+  benchmark:
+    name: Benchmark — Alethia vs Playwright
+    runs-on: ubuntu-latest
+    needs: e2e
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out starter
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            xvfb \
+            libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+            libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+            libgbm1 libpango-1.0-0 libcairo2 libasound2t64 libgtk-3-0 \
+            libxshmfence1 libnotify4 libsecret-1-0 libnspr4
+
+      - name: Install Alethia
+        run: |
+          npm install -g @vitronai/alethia@latest
+          alethia-mcp --version
+
+      - name: Install Playwright
+        working-directory: benchmark
+        run: |
+          npm install
+          npx playwright install chromium --with-deps
+
+      - name: Serve Atlas on :5173
+        run: |
+          python3 -m http.server 5173 >/tmp/atlas-server.log 2>&1 &
+          for i in $(seq 1 20); do
+            if curl -sf http://127.0.0.1:5173 >/dev/null; then
+              echo "Atlas is up."
+              exit 0
+            fi
+            sleep 0.25
+          done
+          echo "Atlas failed to start" >&2
+          exit 1
+
+      - name: Run benchmark
+        env:
+          ELECTRON_DISABLE_SANDBOX: '1'
+          ALETHIA_BRIDGE: alethia-mcp
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
+            node benchmark/compare.mjs --iterations 10
+
+      - name: Render summary
+        if: always()
+        run: |
+          if [ -f benchmark/results.json ]; then
+            echo "## Benchmark results" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '| Flow | Alethia mean | Alethia p95 | Playwright mean | Playwright p95 | Speedup (mean) |' >> "$GITHUB_STEP_SUMMARY"
+            echo '|---|---|---|---|---|---|' >> "$GITHUB_STEP_SUMMARY"
+            node -e "
+              const r = JSON.parse(require('fs').readFileSync('benchmark/results.json','utf8'));
+              for (const [flow, v] of Object.entries(r.flows)) {
+                console.log(\`| \${flow} | \${v.alethia.meanMs}ms | \${v.alethia.p95Ms}ms | \${v.playwright.meanMs}ms | \${v.playwright.p95Ms}ms | \${v.speedupMean.toFixed(1)}× |\`);
+              }
+            " >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmark/results.json
+            /tmp/atlas-server.log
+          if-no-files-found: warn
+          retention-days: 30

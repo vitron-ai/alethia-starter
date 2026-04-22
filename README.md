@@ -77,6 +77,25 @@ node __alethia__/ci-runner.mjs
 
 The runner respects `ALETHIA_TARGET` if your app runs on a different port.
 
+---
+
+## Verify the "faster than CDP-based tools" claim yourself
+
+The [`benchmark/`](./benchmark) directory is a reproducibility kit. Same Atlas app. Same three flows. Same machine. Numbers you can check.
+
+```bash
+npm install --prefix benchmark
+npm run playwright:install --prefix benchmark
+npm install -g @vitronai/alethia@latest
+
+python3 -m http.server 5173 &
+node benchmark/compare.mjs --iterations 10
+```
+
+Prints a comparison table; writes `benchmark/results.json`. Takes ~3–5 min for N=10. Committed baseline numbers from a reference machine live in `benchmark/baseline.json`. Full methodology, flag list, and honest caveats in [`benchmark/README.md`](./benchmark/README.md).
+
+If your numbers disagree with the baseline on comparable hardware, open an issue — we want the claim to be defensible, not marketing-absolute.
+
 ### Reporter options
 
 ```bash
