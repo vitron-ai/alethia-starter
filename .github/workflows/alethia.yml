@@ -41,17 +41,17 @@ jobs:
           npm install -g @vitronai/alethia@latest
           alethia-mcp --version
 
-      - name: Serve Atlas on :5173
+      - name: Serve Anvil on :5173
         run: |
-          python3 -m http.server 5173 >/tmp/atlas-server.log 2>&1 &
+          python3 -m http.server 5173 >/tmp/anvil-server.log 2>&1 &
           for i in $(seq 1 20); do
             if curl -sf http://127.0.0.1:5173 >/dev/null; then
-              echo "Atlas is up."
+              echo "Anvil is up."
               exit 0
             fi
             sleep 0.25
           done
-          echo "Atlas failed to start" >&2
+          echo "Anvil failed to start" >&2
           exit 1
 
       - name: Preflight
@@ -79,7 +79,7 @@ jobs:
         with:
           name: alethia-logs
           path: |
-            /tmp/atlas-server.log
+            /tmp/anvil-server.log
             ~/.alethia/logs/**
           if-no-files-found: ignore
           retention-days: 7
@@ -120,17 +120,17 @@ jobs:
           npm install
           npx playwright install chromium --with-deps
 
-      - name: Serve Atlas on :5173
+      - name: Serve Anvil on :5173
         run: |
-          python3 -m http.server 5173 >/tmp/atlas-server.log 2>&1 &
+          python3 -m http.server 5173 >/tmp/anvil-server.log 2>&1 &
           for i in $(seq 1 20); do
             if curl -sf http://127.0.0.1:5173 >/dev/null; then
-              echo "Atlas is up."
+              echo "Anvil is up."
               exit 0
             fi
             sleep 0.25
           done
-          echo "Atlas failed to start" >&2
+          echo "Anvil failed to start" >&2
           exit 1
 
       - name: Run benchmark
@@ -142,23 +142,11 @@ jobs:
           ALETHIA_HEADLESS: '1'
         run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
-            node benchmark/compare.mjs --iterations 10
+            node benchmark/compare.mjs --iterations 10 --include-install
 
       - name: Render summary
         if: always()
         run: |
           if [ -f benchmark/results.json ]; then
-            echo "## Benchmark — Alethia vs Playwright" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "How long each framework takes to run a single test flow in an agent workflow. Lower is better." >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo '| Flow | What it tests | Alethia | Playwright | Alethia is |' >> "$GITHUB_STEP_SUMMARY"
-            echo '|---|---|---|---|---|' >> "$GITHUB_STEP_SUMMARY"
-            node -e "
-              const fmt = (ms) => ms >= 1000 ? (ms/1000).toFixed(2) + 's' : Math.round(ms) + 'ms';
-              const r = JSON.parse(require('fs').readFileSync('benchmark/results.json','utf8'));
-              for (const [flow, v] of Object.entries(r.flows)) {
-                console.log(\`| \${flow} | \${v.description || ''} | \${fmt(v.alethia.subseq.meanMs)} | \${fmt(v.playwright.meanMs)} | **\${v.speedup.toFixed(1)}× faster** |\`);
-              }
-            " >> "$GITHUB_STEP_SUMMARY"
+            node benchmark/render-ci-summary.mjs
           fi

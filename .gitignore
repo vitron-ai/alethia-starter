@@ -14,5 +14,12 @@ Thumbs.db
 .alethia/
 *.alethia-session.json
 
+# playwright-mcp runtime artifacts (snapshot YAML dumps + console logs)
+.playwright-mcp/
+
+# benchmark test artifacts (regenerated on every run)
+benchmark/test-results/
+benchmark/results.json
+
 # python cache from `python3 -m http.server`
 __pycache__/

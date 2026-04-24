@@ -2,13 +2,15 @@
   "name": "alethia-benchmark",
   "version": "0.1.0",
   "private": true,
-  "description": "Apples-to-apples benchmark harness: Alethia NLP vs Playwright on the same Atlas flows, same machine. Reproducibility kit for the 'faster than CDP-based tools' claim.",
+  "description": "Apples-to-apples benchmark harness: Alethia NLP vs Playwright on the same Anvil flows, same machine. Reproducibility kit for the 'faster than CDP-based tools' claim.",
   "type": "module",
   "scripts": {
     "compare": "node compare.mjs",
     "playwright:install": "playwright install chromium --with-deps"
   },
   "devDependencies": {
-    "@playwright/test": "^1.48.0"
+    "@playwright/mcp": "^0.0.70",
+    "@playwright/test": "^1.48.0",
+    "js-tiktoken": "^1.0.14"
   }
 }
