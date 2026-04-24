@@ -99,7 +99,7 @@ const stats = (timings) => {
 // ────────────────────────────────────────────────────────────────────────────
 
 class StdioMcpClient {
-  constructor(cmd, args, env, cwd) {
+  constructor(cmd, args, env, cwd, { forwardStderr = false } = {}) {
     this.child = spawn(cmd, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, ...env },
@@ -112,7 +112,14 @@ class StdioMcpClient {
     this.child.stdout.setEncoding('utf8');
     this.child.stderr.setEncoding('utf8');
     this.child.stdout.on('data', (chunk) => this._onData(chunk));
-    this.child.stderr.on('data', (chunk) => { this.stderr += chunk; });
+    this.child.stderr.on('data', (chunk) => {
+      this.stderr += chunk;
+      // When enabled, forward the child's stderr to the benchmark's own stderr
+      // so human-readable one-liners and failure diagnostics show up in CI
+      // logs. Agents reading stdout are unaffected — this is strictly for the
+      // human scrolling the workflow output.
+      if (forwardStderr) process.stderr.write(chunk);
+    });
     this.child.on('exit', (code) => {
       for (const { reject } of this.pending.values()) {
         reject(new Error(`Bridge exited with code ${code} before responding. Stderr: ${this.stderr.slice(-500)}`));
@@ -178,10 +185,13 @@ async function benchmarkAlethia(flow, iterations) {
   const instructions = rawInstructions.replace(/http:\/\/127\.0\.0\.1:5173/g, TARGET);
 
   const [bridgeBin, ...bridgeArgs] = BRIDGE_CMD;
+  // Forward the bridge's stderr so its one-line tell summaries (and failure
+  // diagnostics) land in the benchmark's own output. Valuable for humans
+  // scrolling CI logs; the agent stdout path is untouched.
   const client = new StdioMcpClient(bridgeBin, bridgeArgs, {
     ALETHIA_TARGET: TARGET,
     ELECTRON_DISABLE_SANDBOX: process.env.ELECTRON_DISABLE_SANDBOX ?? '1',
-  });
+  }, undefined, { forwardStderr: true });
 
   try {
     await client.request('initialize', {
