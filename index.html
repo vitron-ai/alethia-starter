@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Atlas — Task Operations Console</title>
+<title>Anvil — Task Operations Console</title>
 <style>
   :root {
     --bg: #0f172a; --bg-2: #1e293b; --bg-3: #334155;
@@ -139,7 +139,7 @@
   <div id="root"></div>
 <script>
 /*
- * Atlas — a tiny operations console used as the test subject for
+ * Anvil — a tiny operations console used as the test subject for
  * Alethia. Deliberately single-file and dependency-free so forking
  * takes seconds, not a package install.
  *
@@ -225,7 +225,7 @@ const store = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `atlas-tasks-${Date.now()}.json`;
+    a.download = `anvil-tasks-${Date.now()}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -349,7 +349,7 @@ const requireAuth = (fn, path) => () => {
   root.innerHTML = `
     <div class="app">
       <nav class="sidebar" aria-label="Primary navigation">
-        <div class="sidebar-brand"><span class="dot" aria-hidden="true"></span> Atlas</div>
+        <div class="sidebar-brand"><span class="dot" aria-hidden="true"></span> Anvil</div>
         <button class="nav-link ${path==='/dashboard'?'active':''}" data-nav="/dashboard">Dashboard</button>
         <button class="nav-link ${path==='/tasks'?'active':''}" data-nav="/tasks">Tasks</button>
         <button class="nav-link ${path==='/settings'?'active':''}" data-nav="/settings">Settings</button>
@@ -367,7 +367,7 @@ function renderSignIn() {
   root.innerHTML = `
     <div class="auth-shell">
       <form class="auth-card" id="signin-form" novalidate>
-        <h1><span class="auth-brand-dot" aria-hidden="true"></span>Atlas</h1>
+        <h1><span class="auth-brand-dot" aria-hidden="true"></span>Anvil</h1>
         <p class="lead">Sign in to the operations console.</p>
         <div class="field">
           <label for="email">Email</label>

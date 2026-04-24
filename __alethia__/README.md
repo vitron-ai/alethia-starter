@@ -1,4 +1,4 @@
-# Alethia tests for Atlas
+# Alethia tests for Anvil
 
 This directory is the test suite. Each `.alethia` file is a set of plain-English instructions that Alethia compiles, executes, and verifies.
 

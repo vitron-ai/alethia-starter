@@ -19,7 +19,7 @@ cd alethia-starter
 python3 -m http.server 5173
 ```
 
-Open [http://127.0.0.1:5173](http://127.0.0.1:5173) — you should see **Atlas**, a tiny operations console. Sign in with anything (e.g. `alice@company.com` / `platform`).
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173) — you should see **Anvil**, a tiny operations console. Sign in with anything (e.g. `alice@company.com` / `platform`).
 
 ---
 
@@ -64,7 +64,7 @@ The agent will call `alethia_tell` once per test file and report pass/fail. File
 
 This repo ships a GitHub Actions workflow at [`.github/workflows/alethia.yml`](./.github/workflows/alethia.yml) that:
 
-1. Starts Atlas on a static server
+1. Starts Anvil on a static server
 2. Installs xvfb + Electron's Linux deps
 3. Runs [`__alethia__/ci-runner.mjs`](./__alethia__/ci-runner.mjs) — a tiny stdio MCP client that pipes every `.alethia` file through `@vitronai/alethia` and fails the build on the first red step
 
@@ -81,7 +81,7 @@ The runner respects `ALETHIA_TARGET` if your app runs on a different port.
 
 ## Verify the "faster than CDP-based tools" claim yourself
 
-The [`benchmark/`](./benchmark) directory is a reproducibility kit. Same Atlas app. Same three flows. Same machine. Numbers you can check.
+The [`benchmark/`](./benchmark) directory is a reproducibility kit. Same Anvil app. Same three flows. Same machine. Numbers you can check.
 
 ```bash
 npm install --prefix benchmark
@@ -111,7 +111,7 @@ Set `NO_COLOR=1` to disable ANSI colors. Status badges: `[PASS]` green, `[FAIL]`
 
 ## What the tests exercise
 
-The Atlas app is deliberately small but real enough to surface bugs that a static HTML demo wouldn't:
+The Anvil app is deliberately small but real enough to surface bugs that a static HTML demo wouldn't:
 
 - **Async operations** with loading spinners (sign-in, add-task, toggle, delete — each is a `setTimeout`-simulated round trip)
 - **Client-side form validation** with inline error messages

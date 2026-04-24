@@ -1,4 +1,4 @@
-name atlas task search flow
+name anvil task search flow
 navigate to http://127.0.0.1:5173
 type alice@company.com into the email field
 type platform into the team field

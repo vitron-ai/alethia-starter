@@ -2,7 +2,7 @@
 
 import { test, expect } from '@playwright/test';
 
-test('atlas task search flow', async ({ page }) => {
+test('anvil task search flow', async ({ page }) => {
   await page.goto('http://127.0.0.1:5173');
   await page.getByLabel('Email').fill('alice@company.com');
   await page.getByLabel('Team').fill('platform');

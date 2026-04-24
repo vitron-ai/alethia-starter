@@ -1,5 +1,5 @@
 // Playwright config used only by the benchmark harness. Pointed at the
-// Atlas demo app served on 127.0.0.1:5173. Headless, single worker, no
+// Anvil demo app served on 127.0.0.1:5173. Headless, single worker, no
 // retries — we're measuring fresh per-iteration wall time, not suite
 // reliability. The compare.mjs harness spins up the server + calls
 // playwright test once per iteration and parses JSON output.

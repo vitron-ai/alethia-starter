@@ -1,6 +1,6 @@
-name atlas smoke
+name anvil smoke
 navigate to http://127.0.0.1:5173
-assert Atlas is visible
+assert Anvil is visible
 assert Sign in to the operations console is visible
 assert Email is visible
 assert Team is visible
