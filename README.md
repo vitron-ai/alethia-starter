@@ -5,7 +5,7 @@
 [![npm](https://img.shields.io/npm/v/%40vitronai%2Falethia?label=%40vitronai%2Falethia&color=3b82f6)](https://www.npmjs.com/package/@vitronai/alethia)
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
-**Anvil** is the reference application Alethia is dogfooded against — a tiny operations console used to demonstrate agent-native E2E testing and to host the head-to-head Playwright / Playwright-MCP benchmark. Fork it to evaluate Alethia against your own agent, or to reproduce the benchmark numbers cited on [vitron.ai](https://vitron.ai).
+Reference application + complete E2E test suite for [Alethia](https://www.npmjs.com/package/@vitronai/alethia). Fork **Anvil** to learn the agent-native testing pattern, adapt the 14 plain-English `.alethia` specs to your own app, and run them in CI. Also hosts the reproducible head-to-head Playwright / Playwright-MCP benchmark cited on [vitron.ai](https://vitron.ai).
 
 No framework. No build step. Static HTML + 14 NLP test files, runs in any static server.
 
