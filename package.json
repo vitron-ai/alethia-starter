@@ -1,5 +1,5 @@
 {
-  "name": "alethia-starter",
+  "name": "alethia-anvil",
   "version": "0.1.0",
   "private": true,
   "description": "A working starting point for writing agent-native E2E tests with Alethia. Fork this, adapt the NLP, run the CI.",
@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vitron-ai/alethia-starter.git"
+    "url": "git+https://github.com/vitron-ai/alethia-anvil.git"
   },
   "license": "MIT"
 }

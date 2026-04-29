@@ -1,21 +1,21 @@
-# alethia-starter
+# alethia-anvil
 
-[![alethia](https://github.com/vitron-ai/alethia-starter/actions/workflows/alethia.yml/badge.svg?branch=main)](https://github.com/vitron-ai/alethia-starter/actions/workflows/alethia.yml?query=branch%3Amain)
+[![alethia](https://github.com/vitron-ai/alethia-anvil/actions/workflows/alethia.yml/badge.svg?branch=main)](https://github.com/vitron-ai/alethia-anvil/actions/workflows/alethia.yml?query=branch%3Amain)
 [![alethia verified](https://img.shields.io/badge/alethia-verified-22c55e?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48L3N2Zz4=)](https://github.com/vitron-ai/alethia)
 [![npm](https://img.shields.io/npm/v/%40vitronai%2Falethia?label=%40vitronai%2Falethia&color=3b82f6)](https://www.npmjs.com/package/@vitronai/alethia)
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
-A working starting point for writing agent-native E2E tests with [Alethia](https://www.npmjs.com/package/@vitronai/alethia). Fork this, adapt the NLP, point your agent at it.
+**Anvil** is the reference application Alethia is dogfooded against — a tiny operations console used to demonstrate agent-native E2E testing and to host the head-to-head Playwright / Playwright-MCP benchmark. Fork it to evaluate Alethia against your own agent, or to reproduce the benchmark numbers cited on [vitron.ai](https://vitron.ai).
 
-No framework. No build step. Two files, runs in any static server.
+No framework. No build step. Static HTML + 14 NLP test files, runs in any static server.
 
 ---
 
 ## Try it in 30 seconds
 
 ```bash
-git clone https://github.com/vitron-ai/alethia-starter.git
-cd alethia-starter
+git clone https://github.com/vitron-ai/alethia-anvil.git
+cd alethia-anvil
 python3 -m http.server 5173
 ```
 
